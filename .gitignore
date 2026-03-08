@@ -1,0 +1,15 @@
+# Pliki zależności
+node_modules/
+package-lock.json
+
+# Pliki z konfiguracją
+.env
+config.json
+
+# Token i dane wrażliwe
+token.txt
+*.log
+
+# Systemowe śmieci
+.DS_Store
+Thumbs.db
