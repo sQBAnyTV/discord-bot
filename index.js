@@ -4,14 +4,11 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent // Potrzebne do czytania wiadomości
+        GatewayIntentBits.MessageContent
     ] 
 });
 
 const token = process.env.TOKEN;
-
-// ID kanału, na którym bot ma nasłuchiwać propozycji
-// Musisz to zmienić na ID swojego kanału!
 const KANAL_PROPONOWANIA = process.env.KANAL_ID;
 
 client.once('ready', () => {
@@ -30,43 +27,56 @@ client.on('interactionCreate', async interaction => {
 
 // Nasłuchiwanie na wiadomości
 client.on('messageCreate', async message => {
-    // Ignoruj wiadomości od botów (żeby bot nie reagował na samego siebie)
     if (message.author.bot) return;
     
-    // Sprawdź czy wiadomość jest na odpowiednim kanale
     if (message.channel.id === KANAL_PROPONOWANIA) {
         try {
             // 1. Usuń oryginalną wiadomość
             await message.delete();
             
-            // 2. Stwórz embed (ładną wiadomość)
+            // 2. Stwórz embed
             const embed = new EmbedBuilder()
-                .setColor(0xFF8C00) // Pomarańczowy kolor
+                .setColor(0xFF8C00)
                 .setTitle('📝 Nowa propozycja!')
-                .setDescription(message.content) // Treść propozycji
+                .setDescription(message.content)
                 .setAuthor({ 
                     name: message.author.username, 
                     iconURL: message.author.displayAvatarURL() 
                 })
-                .setTimestamp() // Dodaje czas wysłania
+                .setTimestamp()
                 .setFooter({ text: 'Zagłosuj używając reakcji poniżej' });
             
-            // 3. Wyślij embed na ten sam kanał
+            // 3. Wyślij embed
             const sentMessage = await message.channel.send({ embeds: [embed] });
             
-            // 4. Dodaj reakcje (plus i minus)
+            // 4. Dodaj reakcje
             await sentMessage.react('✅');
             await sentMessage.react('❌');
             
+            // 5. STWÓRZ WĄTEK DO DYSKUSJI
+            try {
+                const thread = await sentMessage.startThread({
+                    name: `Dyskusja: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`,
+                    autoArchiveDuration: 1440,
+                    reason: 'Automatyczny wątek pod propozycją',
+                });
+                
+                await thread.send(`👋 Witaj ${message.author}! Tutaj możesz dyskutować o swojej propozycji.`);
+                console.log(`Utworzono wątek: ${thread.name}`);
+                
+            } catch (threadError) {
+                console.error('Nie udało się utworzyć wątku:', threadError);
+                // Nie wysyłamy błędu na kanał, żeby nie spamować
+            }
+            
         } catch (error) {
             console.error('Wystąpił błąd:', error);
-            // Jeśli coś pójdzie nie tak, poinformuj na kanale
             await message.channel.send('❌ Wystąpił błąd podczas przetwarzania propozycji.');
         }
     }
 });
 
-// Prosty serwer HTTP żeby Render przestał narzekać
+// Serwer HTTP dla Render
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,4 +88,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serwer statusu nasłuchuje na porcie ${PORT}`);
 });
+
 client.login(token);
