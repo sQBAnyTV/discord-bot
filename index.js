@@ -12,7 +12,7 @@ const token = process.env.TOKEN;
 
 // ID kanału, na którym bot ma nasłuchiwać propozycji
 // Musisz to zmienić na ID swojego kanału!
-const KANAL_PROPONOWANIA = '1480275088711614626';
+const KANAL_PROPONOWANIA = '1473083843966795930';
 
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
