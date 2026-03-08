@@ -61,7 +61,7 @@ client.on('messageCreate', async message => {
                     reason: 'Automatyczny wątek pod propozycją',
                 });
                 
-                await thread.send(`👋 Witaj ${message.author}! Tutaj możesz dyskutować o swojej propozycji.`);
+                await thread.send(`👋 Witaj ${message.author}! Tutaj możecie dyskutować o podanej propozycji.`);
                 console.log(`Utworzono wątek: ${thread.name}`);
                 
             } catch (threadError) {
