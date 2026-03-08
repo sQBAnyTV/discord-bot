@@ -8,7 +8,7 @@ const client = new Client({
     ] 
 });
 
-const token = process.env.MTQ4MDI3NDk4MTc1NjczMTYxMw.GF4eOp.wIKLGimyMh5qypkolwCJsnSASq_vQ_UxQYP3Gw;
+const token = process.env.TOKEN;
 
 // ID kanału, na którym bot ma nasłuchiwać propozycji
 // Musisz to zmienić na ID swojego kanału!
