@@ -22,16 +22,22 @@ function wczytajLicznik() {
         const data = fs.readFileSync(licznikPath);
         return JSON.parse(data);
     } catch {
-        return { ostatnia_liczba: 0, ostatni_uzytkownik: "", rekord: 0 };
+        return { 
+            ostatnia_liczba: 0, 
+            ostatni_uzytkownik: "", 
+            rekord: 0,
+            czyWyslanoRekord: false 
+        };
     }
 }
 
 // Funkcja do zapisania licznika
-function zapiszLicznik(liczba, uzytkownik, rekord) {
+function zapiszLicznik(liczba, uzytkownik, rekord, czyWyslanoRekord) {
     const data = { 
         ostatnia_liczba: liczba, 
         ostatni_uzytkownik: uzytkownik,
-        rekord: rekord 
+        rekord: rekord,
+        czyWyslanoRekord: czyWyslanoRekord
     };
     fs.writeFileSync(licznikPath, JSON.stringify(data));
 }
@@ -131,15 +137,21 @@ client.on('messageCreate', async message => {
         if (numer === oczekiwanaLiczba) {
             // Dobra liczba
             
-            // Sprawdź czy to nowy rekord
             let nowyRekord = licznik.rekord;
+            let czyWyslano = licznik.czyWyslanoRekord || false;
+            
+            // Sprawdź czy to nowy rekord ogólny
             if (numer > licznik.rekord) {
                 nowyRekord = numer;
-                // Wyślij wiadomość o nowym rekordzie
-                await message.channel.send(`🎉 **NOWY REKORD!** ${numer} 🎉 👑`);
+                
+                // Wyślij komunikat TYLKO jeśli jeszcze nie wysłano w tej turze
+                if (!czyWyslano) {
+                    await message.channel.send(`🎉 **NOWY REKORD!** ${numer} 🎉 👑`);
+                    czyWyslano = true;
+                }
             }
             
-            zapiszLicznik(numer, message.author.id, nowyRekord);
+            zapiszLicznik(numer, message.author.id, nowyRekord, czyWyslano);
             
             // Dodaj reakcję potwierdzenia
             await message.react('✅');
@@ -153,13 +165,13 @@ client.on('messageCreate', async message => {
                     await message.channel.bulkDelete(fetched);
                 } while (fetched.size >= 2);
                 
-                // 2. Nadaj rolę blokującą na 24h
+                // 2. Nadaj rolę blokującą na 1h
                 const muteRole = message.guild.roles.cache.get(ROLA_MUTE_LICZENIE);
                 if (muteRole) {
                     const member = message.member;
                     await member.roles.add(muteRole);
                     
-                    // Usuń rolę po 24h
+                    // Usuń rolę po 1h
                     setTimeout(async () => {
                         try {
                             await member.roles.remove(muteRole);
@@ -173,8 +185,8 @@ client.on('messageCreate', async message => {
                 // 3. Wyślij wiadomość o błędzie z rekordem
                 await message.channel.send(`❌ **${message.author.username}** nie potrafi liczyć! 😵\n🔄 Zaczynamy od nowa! 🔄\n🏆 Aktualny rekord to: **${licznik.rekord}** 👑`);
                 
-                // 4. Zresetuj licznik (zachowując rekord)
-                zapiszLicznik(0, "", licznik.rekord);
+                // 4. Zresetuj licznik (zachowując rekord, resetując flagę wysłania)
+                zapiszLicznik(0, "", licznik.rekord, false);
                 
             } catch (error) {
                 console.error('Błąd podczas czyszczenia kanału:', error);
