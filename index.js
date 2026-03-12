@@ -22,8 +22,18 @@ function wczytajLicznik() {
         const data = fs.readFileSync(licznikPath);
         return JSON.parse(data);
     } catch {
-        return { ostatnia_liczba: 0, ostatni_uzytkownik: "" };
+        return { ostatnia_liczba: 0, ostatni_uzytkownik: "", rekord: 0 };
     }
+}
+
+// Funkcja do zapisania licznika
+function zapiszLicznik(liczba, uzytkownik, rekord) {
+    const data = { 
+        ostatnia_liczba: liczba, 
+        ostatni_uzytkownik: uzytkownik,
+        rekord: rekord 
+    };
+    fs.writeFileSync(licznikPath, JSON.stringify(data));
 }
 
 // Funkcja do zapisania licznika
