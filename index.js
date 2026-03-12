@@ -36,15 +36,10 @@ function zapiszLicznik(liczba, uzytkownik, rekord) {
     fs.writeFileSync(licznikPath, JSON.stringify(data));
 }
 
-// Funkcja do zapisania licznika
-function zapiszLicznik(liczba, uzytkownik) {
-    const data = { ostatnia_liczba: liczba, ostatni_uzytkownik: uzytkownik };
-    fs.writeFileSync(licznikPath, JSON.stringify(data));
-}
-
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`Nasłuchuję na kanale o ID: ${KANAL_PROPONOWANIA}`);
+    console.log(`Nasłuchuję na kanale liczenia o ID: ${KANAL_LICZENIA}`);
 });
 
 // Nasłuchiwanie na komendy slash
@@ -53,6 +48,13 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'ping') {
         await interaction.reply('Pong! 🏓');
+    }
+    
+    if (interaction.commandName === 'rekord') {
+        const licznik = wczytajLicznik();
+        const rekord = licznik.rekord || 0;
+        
+        await interaction.reply(`🏆 Aktualny rekord liczenia to: **${rekord}**! 👑`);
     }
 });
 
@@ -118,7 +120,7 @@ client.on('messageCreate', async message => {
         // Sprawdź czy nie ten sam użytkownik co poprzednio
         if (message.author.id === licznik.ostatni_uzytkownik) {
             await message.delete();
-            const warning = await message.channel.send(`❌ ${message.author} nie możesz pisać dwa razy pod rząd!`);
+            const warning = await message.channel.send(`❌ ${message.author} nie możesz pisać dwa razy pod rząd! ⚠️`);
             setTimeout(() => warning.delete(), 5000);
             return;
         }
@@ -128,7 +130,17 @@ client.on('messageCreate', async message => {
         
         if (numer === oczekiwanaLiczba) {
             // Dobra liczba
-            zapiszLicznik(numer, message.author.id);
+            
+            // Sprawdź czy to nowy rekord
+            let nowyRekord = licznik.rekord;
+            if (numer > licznik.rekord) {
+                nowyRekord = numer;
+                // Wyślij wiadomość o nowym rekordzie
+                await message.channel.send(`🎉 **NOWY REKORD!** ${numer} 🎉 👑`);
+            }
+            
+            zapiszLicznik(numer, message.author.id, nowyRekord);
+            
             // Dodaj reakcję potwierdzenia
             await message.react('✅');
         } else {
@@ -158,11 +170,11 @@ client.on('messageCreate', async message => {
                     }, 24 * 60 * 60 * 1000); // 24 godziny
                 }
                 
-                // 3. Wyślij wiadomość o błędzie
-                await message.channel.send(`🔴 ${message.author} nie potrafi liczyć. Zaczynamy od nowa! (Prawidłowa liczba to ${oczekiwanaLiczba})`);
+                // 3. Wyślij wiadomość o błędzie z rekordem
+                await message.channel.send(`❌ **${message.author.username}** nie potrafi liczyć! 😵\n🔄 Zaczynamy od nowa! 🔄\n🏆 Aktualny rekord to: **${licznik.rekord}** 👑`);
                 
-                // 4. Zresetuj licznik
-                zapiszLicznik(0, "");
+                // 4. Zresetuj licznik (zachowując rekord)
+                zapiszLicznik(0, "", licznik.rekord);
                 
             } catch (error) {
                 console.error('Błąd podczas czyszczenia kanału:', error);
