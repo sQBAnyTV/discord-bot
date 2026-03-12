@@ -19,12 +19,10 @@ const rest = new REST({ version: '10' }).setToken(token);
 (async () => {
     try {
         console.log('Rozpoczęto rejestrację komend...');
-
         await rest.put(
             Routes.applicationCommands(clientId),
             { body: commands },
         );
-
         console.log('✅ Komendy zostały zarejestrowane!');
     } catch (error) {
         console.error('❌ Błąd podczas rejestracji:', error);
