@@ -1,6 +1,5 @@
 const { REST, Routes } = require('discord.js');
 
-// Komenda którą chcemy utworzyć
 const commands = [
     {
         name: 'ping',
@@ -12,24 +11,21 @@ const commands = [
     }
 ];
 
-// Twój token i ID z Discord Developer Portalu
 const token = process.env.TOKEN;
-const clientId = '1480274981756731613'; // To to ID które kopiowaliśmy z OAuth2
+const clientId = process.env.CLIENT_ID || '1480274981756731613';
 
-// REST = Representational State Transfer - sposób komunikacji z API Discorda
 const rest = new REST({ version: '10' }).setToken(token);
 
-// Rejestrujemy komendę
 (async () => {
     try {
-        console.log('Rozpoczęto rejestrację komendy /ping');
+        console.log('Rozpoczęto rejestrację komend...');
 
         await rest.put(
             Routes.applicationCommands(clientId),
             { body: commands },
         );
 
-        console.log('✅ Komenda /ping została zarejestrowana!');
+        console.log('✅ Komendy zostały zarejestrowane!');
     } catch (error) {
         console.error('❌ Błąd podczas rejestracji:', error);
     }
