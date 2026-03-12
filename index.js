@@ -1,9 +1,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
-
-const fs = require('fs');
-const licznikPath = './licznik.json';
-const KANAL_LICZENIA = process.env.KANAL_LICZENIA;
-const ROLA_MUTE_LICZENIE = process.env.ROLA_MUTE_LICZENIE;
+const mongoose = require('mongoose');
+const Licznik = require('./models/Licznik');
 
 const client = new Client({ 
     intents: [
@@ -15,32 +12,46 @@ const client = new Client({
 
 const token = process.env.TOKEN;
 const KANAL_PROPONOWANIA = process.env.KANAL_ID;
+const KANAL_LICZENIA = process.env.KANAL_LICZENIA;
+const ROLA_MUTE_LICZENIE = process.env.ROLA_MUTE_LICZENIE;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Funkcja do wczytania licznika
-function wczytajLicznik() {
+// Funkcje do pracy z MongoDB
+async function wczytajLicznik() {
     try {
-        const data = fs.readFileSync(licznikPath);
-        return JSON.parse(data);
-    } catch {
-        return { 
-            ostatnia_liczba: 0, 
-            ostatni_uzytkownik: "", 
-            rekord: 0,
-            czyWyslanoRekord: false 
-        };
+        let licznik = await Licznik.findById('licznik');
+        if (!licznik) {
+            licznik = new Licznik({ _id: 'licznik' });
+            await licznik.save();
+        }
+        return licznik;
+    } catch (error) {
+        console.error('Błąd odczytu z MongoDB:', error);
+        return null;
     }
 }
 
-// Funkcja do zapisania licznika
-function zapiszLicznik(liczba, uzytkownik, rekord, czyWyslanoRekord) {
-    const data = { 
-        ostatnia_liczba: liczba, 
-        ostatni_uzytkownik: uzytkownik,
-        rekord: rekord,
-        czyWyslanoRekord: czyWyslanoRekord
-    };
-    fs.writeFileSync(licznikPath, JSON.stringify(data));
+async function zapiszLicznik(ostatnia_liczba, ostatni_uzytkownik, rekord, czyWyslanoRekord) {
+    try {
+        await Licznik.findByIdAndUpdate('licznik', {
+            ostatnia_liczba,
+            ostatni_uzytkownik,
+            rekord,
+            czyWyslanoRekord
+        }, { upsert: true });
+    } catch (error) {
+        console.error('Błąd zapisu do MongoDB:', error);
+    }
 }
+
+// Połączenie z MongoDB
+mongoose.connect(MONGODB_URI)
+    .then(() => {
+        console.log('✅ Połączono z MongoDB Atlas!');
+    })
+    .catch(err => {
+        console.error('❌ Błąd połączenia z MongoDB:', err);
+    });
 
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
@@ -57,8 +68,8 @@ client.on('interactionCreate', async interaction => {
     }
     
     if (interaction.commandName === 'rekord') {
-        const licznik = wczytajLicznik();
-        const rekord = licznik.rekord || 0;
+        const licznik = await wczytajLicznik();
+        const rekord = licznik?.rekord || 0;
         
         await interaction.reply(`🏆 Aktualny rekord liczenia to: **${rekord}**! 👑`);
     }
@@ -114,7 +125,9 @@ client.on('messageCreate', async message => {
         // Ignoruj bota
         if (message.author.bot) return;
         
-        const licznik = wczytajLicznik();
+        const licznik = await wczytajLicznik();
+        if (!licznik) return;
+        
         const numer = parseInt(message.content);
         
         // Sprawdź czy to na pewno liczba
@@ -151,7 +164,7 @@ client.on('messageCreate', async message => {
                 }
             }
             
-            zapiszLicznik(numer, message.author.id, nowyRekord, czyWyslano);
+            await zapiszLicznik(numer, message.author.id, nowyRekord, czyWyslano);
             
             // Dodaj reakcję potwierdzenia
             await message.react('✅');
@@ -186,7 +199,7 @@ client.on('messageCreate', async message => {
                 await message.channel.send(`❌ **${message.author.username}** nie potrafi liczyć! 😵\n🔄 Zaczynamy od nowa! 🔄\n🏆 Aktualny rekord to: **${licznik.rekord}** 👑`);
                 
                 // 4. Zresetuj licznik (zachowując rekord, resetując flagę wysłania)
-                zapiszLicznik(0, "", licznik.rekord, false);
+                await zapiszLicznik(0, "", licznik.rekord, false);
                 
             } catch (error) {
                 console.error('Błąd podczas czyszczenia kanału:', error);
