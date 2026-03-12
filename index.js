@@ -167,7 +167,7 @@ client.on('messageCreate', async message => {
                         } catch (e) {
                             console.error('Nie udało się usunąć roli:', e);
                         }
-                    }, 24 * 60 * 60 * 1000); // 24 godziny
+                    }, 60 * 60 * 1000); // 1 godzina
                 }
                 
                 // 3. Wyślij wiadomość o błędzie z rekordem
