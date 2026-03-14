@@ -54,6 +54,69 @@ const commands = [
                 required: true
             }
         ]
+    },
+    {
+        name: 'reactionrole',
+        description: 'Dodaj reaction role (tylko moderator)',
+        options: [
+            {
+                name: 'add',
+                description: 'Dodaj nowe reaction role',
+                type: 1, // SUB_COMMAND
+                options: [
+                    {
+                        name: 'message_id',
+                        description: 'ID wiadomości',
+                        type: 3,
+                        required: true
+                    },
+                    {
+                        name: 'emoji',
+                        description: 'Emoji (np. ✅, 🔴, 🟢)',
+                        type: 3,
+                        required: true
+                    },
+                    {
+                        name: 'role',
+                        description: 'Rola do nadania',
+                        type: 8, // ROLE
+                        required: true
+                    }
+                ]
+            },
+            {
+                name: 'remove',
+                description: 'Usuń reaction role',
+                type: 1, // SUB_COMMAND
+                options: [
+                    {
+                        name: 'message_id',
+                        description: 'ID wiadomości',
+                        type: 3,
+                        required: true
+                    },
+                    {
+                        name: 'emoji',
+                        description: 'Emoji do usunięcia',
+                        type: 3,
+                        required: true
+                    }
+                ]
+            },
+            {
+                name: 'list',
+                description: 'Pokaż listę reaction role dla wiadomości',
+                type: 1, // SUB_COMMAND
+                options: [
+                    {
+                        name: 'message_id',
+                        description: 'ID wiadomości',
+                        type: 3,
+                        required: true
+                    }
+                ]
+            }
+        ]
     }
 ];
 

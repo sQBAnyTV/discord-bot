@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const express = require('express');
 const Gracz = require('./models/gracz');
 const Warn = require('./models/warn');
+const ReactionRole = require('./models/reactionrole.js');
 
 const client = new Client({ 
     intents: [
@@ -10,7 +11,9 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildModeration
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildMembers
     ] 
 });
 
@@ -97,7 +100,7 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
     // Lista komend moderacyjnych które mogą być używane wszędzie
-    const komendyModeracyjne = ['warn', 'mute'];
+    const komendyModeracyjne = ['warn', 'mute', 'reactionrole'];
     
     // Jeśli komenda NIE jest moderacyjna, sprawdź kanał
     if (!komendyModeracyjne.includes(interaction.commandName)) {
@@ -260,8 +263,7 @@ client.on('interactionCreate', async interaction => {
             });
         }
     }
-    
-    // -------------------- KOMENDA /MUTE --------------------
+        // -------------------- KOMENDA /MUTE --------------------
     if (interaction.commandName === 'mute') {
         // Sprawdź czy użytkownik ma rolę moderatora
         const member = interaction.member;
@@ -379,6 +381,182 @@ client.on('interactionCreate', async interaction => {
                 ephemeral: true
             });
         }
+    }
+    
+    // -------------------- KOMENDA /REACTIONROLE --------------------
+    if (interaction.commandName === 'reactionrole') {
+        // Tylko moderatorzy mogą używać
+        const member = interaction.member;
+        const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
+        const isAdmin = member.permissions.has('Administrator');
+        
+        if (!hasModRole && !isAdmin) {
+            return interaction.reply({
+                content: '❌ Tylko moderatorzy mogą używać tej komendy!',
+                ephemeral: true
+            });
+        }
+
+        const subcommand = interaction.options.getSubcommand();
+
+        // -------------------- DODAWANIE --------------------
+        if (subcommand === 'add') {
+            const messageId = interaction.options.getString('message_id');
+            const emoji = interaction.options.getString('emoji');
+            const role = interaction.options.getRole('role');
+
+            try {
+                // Sprawdź czy wiadomość istnieje na tym kanale
+                const message = await interaction.channel.messages.fetch(messageId).catch(() => null);
+                if (!message) {
+                    return interaction.reply({
+                        content: '❌ Nie znaleziono wiadomości o podanym ID na tym kanale!',
+                        ephemeral: true
+                    });
+                }
+
+                // Sprawdź czy już istnieje takie powiązanie
+                const existing = await ReactionRole.findOne({
+                    messageId: messageId,
+                    emoji: emoji
+                });
+
+                if (existing) {
+                    return interaction.reply({
+                        content: `❌ To emoji (${emoji}) jest już przypisane do roli <@&${existing.roleId}> dla tej wiadomości!`,
+                        ephemeral: true
+                    });
+                }
+
+                // Zapisz w bazie
+                const rr = new ReactionRole({
+                    messageId: messageId,
+                    channelId: interaction.channel.id,
+                    guildId: interaction.guild.id,
+                    emoji: emoji,
+                    roleId: role.id
+                });
+                await rr.save();
+
+                // Dodaj reakcję do wiadomości
+                await message.react(emoji);
+
+                await interaction.reply({
+                    content: `✅ Dodano reaction role: ${emoji} → ${role} dla wiadomości ${messageId}`,
+                    ephemeral: true
+                });
+
+            } catch (error) {
+                console.error('Błąd przy dodawaniu reaction role:', error);
+                await interaction.reply({
+                    content: '❌ Wystąpił błąd. Sprawdź czy emoji jest poprawne.',
+                    ephemeral: true
+                });
+            }
+        }
+
+        // -------------------- USUWANIE --------------------
+        if (subcommand === 'remove') {
+            const messageId = interaction.options.getString('message_id');
+            const emoji = interaction.options.getString('emoji');
+
+            const deleted = await ReactionRole.findOneAndDelete({
+                messageId: messageId,
+                emoji: emoji
+            });
+
+            if (!deleted) {
+                return interaction.reply({
+                    content: '❌ Nie znaleziono takiego reaction role!',
+                    ephemeral: true
+                });
+            }
+
+            await interaction.reply({
+                content: `✅ Usunięto reaction role dla emoji ${emoji}`,
+                ephemeral: true
+            });
+        }
+
+        // -------------------- LISTA --------------------
+        if (subcommand === 'list') {
+            const messageId = interaction.options.getString('message_id');
+
+            const list = await ReactionRole.find({ messageId: messageId });
+
+            if (list.length === 0) {
+                return interaction.reply({
+                    content: '📋 Brak reaction role dla tej wiadomości.',
+                    ephemeral: true
+                });
+            }
+
+            let opis = '';
+            for (const item of list) {
+                opis += `${item.emoji} → <@&${item.roleId}>\n`;
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFF8C00)
+                .setTitle('📋 Reaction role dla wiadomości')
+                .setDescription(opis)
+                .setFooter({ text: `ID wiadomości: ${messageId}` });
+
+            await interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+    }
+});
+
+// Obsługa dodawania reakcji
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+
+    try {
+        // Pobierz pełną reakcję (jeśli była z cache)
+        if (reaction.partial) await reaction.fetch();
+
+        const rr = await ReactionRole.findOne({
+            messageId: reaction.message.id,
+            emoji: reaction.emoji.name
+        });
+
+        if (!rr) return;
+
+        const member = await reaction.message.guild.members.fetch(user.id);
+        const role = reaction.message.guild.roles.cache.get(rr.roleId);
+
+        if (role && member) {
+            await member.roles.add(role);
+            console.log(`Dodano rolę ${role.name} użytkownikowi ${user.tag}`);
+        }
+    } catch (error) {
+        console.error('Błąd przy dodawaniu roli z reakcji:', error);
+    }
+});
+
+// Obsługa usuwania reakcji
+client.on('messageReactionRemove', async (reaction, user) => {
+    if (user.bot) return;
+
+    try {
+        if (reaction.partial) await reaction.fetch();
+
+        const rr = await ReactionRole.findOne({
+            messageId: reaction.message.id,
+            emoji: reaction.emoji.name
+        });
+
+        if (!rr) return;
+
+        const member = await reaction.message.guild.members.fetch(user.id);
+        const role = reaction.message.guild.roles.cache.get(rr.roleId);
+
+        if (role && member) {
+            await member.roles.remove(role);
+            console.log(`Usunięto rolę ${role.name} użytkownikowi ${user.tag}`);
+        }
+    } catch (error) {
+        console.error('Błąd przy usuwaniu roli z reakcji:', error);
     }
 });
 
