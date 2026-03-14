@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const express = require('express');
 const Gracz = require('./models/gracz');
-const Warn = require('./models/Warn');
+const Warn = require('./models/warn');
 
 const client = new Client({ 
     intents: [
