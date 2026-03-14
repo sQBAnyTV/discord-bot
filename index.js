@@ -7,7 +7,8 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates
     ] 
 });
 
@@ -17,8 +18,20 @@ const KANAL_LOGOW = process.env.KANAL_LOGOW;
 const MONGODB_URI = process.env.MONGODB_URI;
 const KANAL_KOMEND = process.env.KANAL_KOMEND;
 
+// Kanał na którym można zdobywać XP (TEN KONKRETNY)
+const KANAL_XP = '1473083672881139773';
+
 // Stałe levelowania
 const XP_PER_MESSAGE = 10; // XP za każdą wiadomość
+
+// Stałe voice XP
+const VOICE_XP_PER_MINUTE = 10; // 10 XP za minutę
+const VOICE_CHECK_INTERVAL = 60000; // 60 sekund (co minutę)
+const REQUIRED_USERS_IN_CHANNEL = 2; // Minimalna liczba osób w kanale
+
+// Mapy do śledzenia voice
+const voiceTimers = new Map(); // { userId: intervalId }
+const voiceJoinTime = new Map(); // { userId: timestamp }
 
 // Funkcja do obliczania wymaganego XP na dany poziom (progresja geometryczna)
 function wymaganeXp(level) {
@@ -52,6 +65,7 @@ client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`Nasłuchuję na kanale o ID: ${KANAL_PROPONOWANIA}`);
     console.log(`Kanał logów: ${KANAL_LOGOW}`);
+    console.log(`Kanał XP: ${KANAL_XP}`);
 });
 
 // Nasłuchiwanie na komendy slash
@@ -106,7 +120,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply('📊 Jeszcze nie ma żadnych graczy w rankingu!');
         }
         
-        // Stwórz listę排名
+        // Stwórz listę rankingową
         let ranking = '';
         for (let i = 0; i < topGracze.length; i++) {
             const gracz = topGracze[i];
@@ -125,13 +139,127 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
+// Nasłuchiwanie na zmiany statusu voice
+client.on('voiceStateUpdate', async (oldState, newState) => {
+    const userId = newState.member?.id || oldState.member?.id;
+    if (!userId) return;
+    
+    const member = newState.member || oldState.member;
+    const guild = newState.guild || oldState.guild;
+    
+    // Sprawdź czy użytkownik jest botem
+    if (member.user.bot) return;
+    
+    const oldChannel = oldState.channel;
+    const newChannel = newState.channel;
+    
+    // Przypadek 1: Użytkownik DOŁĄCZYŁ do kanału voice
+    if (!oldChannel && newChannel) {
+        console.log(`${member.user.tag} dołączył do voice channel ${newChannel.name}`);
+        
+        // Sprawdź warunki do przyznawania XP
+        const channelSize = newChannel.members.size;
+        const isAlone = channelSize < REQUIRED_USERS_IN_CHANNEL;
+        const isMuted = newState.selfMute || newState.serverMute;
+        const isDeaf = newState.selfDeaf || newState.serverDeaf;
+        
+        // Nie przyznawaj XP jeśli: sam, wyciszony, zagłuszony
+        if (isAlone || isMuted || isDeaf) {
+            return;
+        }
+        
+        // Zapisz czas dołączenia
+        voiceJoinTime.set(userId, Date.now());
+        
+        // Ustaw timer do przyznawania XP
+        const intervalId = setInterval(async () => {
+            try {
+                // Sprawdź aktualny stan użytkownika
+                const currentMember = await guild.members.fetch(userId);
+                const currentState = currentMember.voice;
+                
+                // Jeśli nie ma na voice, wyczyść timer
+                if (!currentState.channel) {
+                    const timer = voiceTimers.get(userId);
+                    if (timer) {
+                        clearInterval(timer);
+                        voiceTimers.delete(userId);
+                        voiceJoinTime.delete(userId);
+                    }
+                    return;
+                }
+                
+                // Sprawdź warunki
+                const currentChannel = currentState.channel;
+                const currentSize = currentChannel.members.size;
+                const currentIsAlone = currentSize < REQUIRED_USERS_IN_CHANNEL;
+                const currentIsMuted = currentState.selfMute || currentState.serverMute;
+                const currentIsDeaf = currentState.selfDeaf || currentState.serverDeaf;
+                
+                // Jeśli warunki niespełnione, nie przyznawaj XP
+                if (currentIsAlone || currentIsMuted || currentIsDeaf) {
+                    return;
+                }
+                
+                // Znajdź gracza w bazie
+                let gracz = await Gracz.findOne({ userId });
+                
+                if (!gracz) {
+                    gracz = new Gracz({
+                        userId,
+                        username: member.user.username
+                    });
+                }
+                
+                // Dodaj XP za minutę na voice (10 XP)
+                gracz.xp += VOICE_XP_PER_MINUTE;
+                gracz.username = member.user.username;
+                
+                // Sprawdź awans
+                await sprawdzAwans(gracz);
+                await gracz.save();
+                
+                console.log(`Przyznano ${VOICE_XP_PER_MINUTE} XP dla ${member.user.tag} za voice`);
+                
+            } catch (error) {
+                console.error('Błąd przy przyznawaniu voice XP:', error);
+            }
+        }, VOICE_CHECK_INTERVAL);
+        
+        voiceTimers.set(userId, intervalId);
+    }
+    
+    // Przypadek 2: Użytkownik OPUŚCIŁ kanał voice
+    if (oldChannel && !newChannel) {
+        console.log(`${member.user.tag} opuścił voice channel ${oldChannel.name}`);
+        
+        // Wyczyść timer
+        const timer = voiceTimers.get(userId);
+        if (timer) {
+            clearInterval(timer);
+            voiceTimers.delete(userId);
+            voiceJoinTime.delete(userId);
+        }
+    }
+    
+    // Przypadek 3: Użytkownik ZMIENIŁ ustawienia (mute/deaf)
+    if (oldChannel && newChannel) {
+        const wasMuted = oldState.selfMute || oldState.serverMute;
+        const isMuted = newState.selfMute || newState.serverMute;
+        
+        if (wasMuted !== isMuted) {
+            console.log(`${member.user.tag} zmienił mute: ${isMuted ? 'tak' : 'nie'}`);
+        }
+    }
+});
+
 // Nasłuchiwanie na wiadomości
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
     
     // -------------------- SYSTEM LEVELOWANIA --------------------
-    // Pomijamy kanał propozycji
-    if (message.channel.id !== KANAL_PROPONOWANIA) {
+    // TYLKO na kanale o ID 1473083672881139773
+    if (message.channel.id === KANAL_XP) {
         try {
             let gracz = await Gracz.findOne({ userId: message.author.id });
             
@@ -182,7 +310,7 @@ client.on('messageCreate', async message => {
             await sentMessage.react('✅');
             await sentMessage.react('❌');
             
-            // 5. Stwórz wątek do dyskusji
+            // 5. Stwórz wątek do dyskusji z trybem powolnym
             try {
                 const thread = await sentMessage.startThread({
                     name: `Dyskusja: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`,
@@ -190,8 +318,11 @@ client.on('messageCreate', async message => {
                     reason: 'Automatyczny wątek pod propozycją',
                 });
                 
+                // Ustaw tryb powolny na 60 sekund w tym wątku
+                await thread.setRateLimitPerUser(60);
+                
                 await thread.send(`👋 Witaj ${message.author}! Tutaj możecie dyskutować o podanej propozycji.`);
-                console.log(`Utworzono wątek: ${thread.name}`);
+                console.log(`Utworzono wątek: ${thread.name} z trybem powolnym 60s`);
                 
             } catch (threadError) {
                 console.error('Nie udało się utworzyć wątku:', threadError);
@@ -214,6 +345,17 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Serwer statusu nasłuchuje na porcie ${PORT}`);
+});
+
+// Wyczyść wszystkie timery przy wyłączeniu bota
+process.on('SIGINT', () => {
+    console.log('Zatrzymywanie bota, czyszczenie timerów voice...');
+    for (const [userId, timer] of voiceTimers) {
+        clearInterval(timer);
+    }
+    voiceTimers.clear();
+    voiceJoinTime.clear();
+    process.exit(0);
 });
 
 client.login(token);
