@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
-const Licznik = require('./models/Licznik');
+const express = require('express');
 
 const client = new Client({ 
     intents: [
@@ -12,39 +12,9 @@ const client = new Client({
 
 const token = process.env.TOKEN;
 const KANAL_PROPONOWANIA = process.env.KANAL_ID;
-const KANAL_LICZENIA = process.env.KANAL_LICZENIA;
-const ROLA_MUTE_LICZENIE = process.env.ROLA_MUTE_LICZENIE;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Funkcje do pracy z MongoDB
-async function wczytajLicznik() {
-    try {
-        let licznik = await Licznik.findById('licznik');
-        if (!licznik) {
-            licznik = new Licznik({ _id: 'licznik' });
-            await licznik.save();
-        }
-        return licznik;
-    } catch (error) {
-        console.error('Błąd odczytu z MongoDB:', error);
-        return null;
-    }
-}
-
-async function zapiszLicznik(ostatnia_liczba, ostatni_uzytkownik, rekord, czyWyslanoRekord) {
-    try {
-        await Licznik.findByIdAndUpdate('licznik', {
-            ostatnia_liczba,
-            ostatni_uzytkownik,
-            rekord,
-            czyWyslanoRekord
-        }, { upsert: true });
-    } catch (error) {
-        console.error('Błąd zapisu do MongoDB:', error);
-    }
-}
-
-// Połączenie z MongoDB
+// Połączenie z MongoDB (opcjonalne - jeśli nie potrzebujesz, możesz usunąć)
 mongoose.connect(MONGODB_URI)
     .then(() => {
         console.log('✅ Połączono z MongoDB Atlas!');
@@ -56,7 +26,6 @@ mongoose.connect(MONGODB_URI)
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`Nasłuchuję na kanale o ID: ${KANAL_PROPONOWANIA}`);
-    console.log(`Nasłuchuję na kanale liczenia o ID: ${KANAL_LICZENIA}`);
 });
 
 // Nasłuchiwanie na komendy slash
@@ -65,13 +34,6 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'ping') {
         await interaction.reply('Pong! 🏓');
-    }
-    
-    if (interaction.commandName === 'rekord') {
-        const licznik = await wczytajLicznik();
-        const rekord = licznik?.rekord || 0;
-        
-        await interaction.reply(`🏆 Aktualny rekord liczenia to: **${rekord}**! 👑`);
     }
 });
 
@@ -82,8 +44,10 @@ client.on('messageCreate', async message => {
     // -------------------- OBSŁUGA KANAŁU PROPOZYCJI --------------------
     if (message.channel.id === KANAL_PROPONOWANIA) {
         try {
+            // 1. Usuń oryginalną wiadomość
             await message.delete();
             
+            // 2. Stwórz embed
             const embed = new EmbedBuilder()
                 .setColor(0xFF8C00)
                 .setTitle('📝 Nowa propozycja!')
@@ -95,11 +59,14 @@ client.on('messageCreate', async message => {
                 .setTimestamp()
                 .setFooter({ text: 'Zagłosuj używając reakcji poniżej' });
             
+            // 3. Wyślij embed
             const sentMessage = await message.channel.send({ embeds: [embed] });
             
+            // 4. Dodaj reakcje
             await sentMessage.react('✅');
             await sentMessage.react('❌');
             
+            // 5. Stwórz wątek do dyskusji
             try {
                 const thread = await sentMessage.startThread({
                     name: `Dyskusja: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`,
@@ -119,98 +86,9 @@ client.on('messageCreate', async message => {
             await message.channel.send('❌ Wystąpił błąd podczas przetwarzania propozycji.');
         }
     }
-    
-    // -------------------- OBSŁUGA KANAŁU LICZENIA --------------------
-    if (message.channel.id === KANAL_LICZENIA) {
-        // Ignoruj bota
-        if (message.author.bot) return;
-        
-        const licznik = await wczytajLicznik();
-        if (!licznik) return;
-        
-        const numer = parseInt(message.content);
-        
-        // Sprawdź czy to na pewno liczba
-        if (isNaN(numer)) {
-            await message.delete();
-            return;
-        }
-        
-        // Sprawdź czy nie ten sam użytkownik co poprzednio
-        if (message.author.id === licznik.ostatni_uzytkownik) {
-            await message.delete();
-            const warning = await message.channel.send(`❌ ${message.author} nie możesz pisać dwa razy pod rząd! ⚠️`);
-            setTimeout(() => warning.delete(), 5000);
-            return;
-        }
-        
-        // Sprawdź czy liczba jest poprawna (kolejna)
-        const oczekiwanaLiczba = licznik.ostatnia_liczba + 1;
-        
-        if (numer === oczekiwanaLiczba) {
-            // Dobra liczba
-            
-            let nowyRekord = licznik.rekord;
-            let czyWyslano = licznik.czyWyslanoRekord || false;
-            
-            // Sprawdź czy to nowy rekord ogólny
-            if (numer > licznik.rekord) {
-                nowyRekord = numer;
-                
-                // Wyślij komunikat TYLKO jeśli jeszcze nie wysłano w tej turze
-                if (!czyWyslano) {
-                    await message.channel.send(`🎉 **NOWY REKORD!** ${numer} 🎉 👑`);
-                    czyWyslano = true;
-                }
-            }
-            
-            await zapiszLicznik(numer, message.author.id, nowyRekord, czyWyslano);
-            
-            // Dodaj reakcję potwierdzenia
-            await message.react('✅');
-        } else {
-            // BŁĄD! Ktoś się pomylił
-            try {
-                // 1. Wyczyść kanał (usuń ostatnie 100 wiadomości)
-                let fetched;
-                do {
-                    fetched = await message.channel.messages.fetch({ limit: 100 });
-                    await message.channel.bulkDelete(fetched);
-                } while (fetched.size >= 2);
-                
-                // 2. Nadaj rolę blokującą na 1h
-                const muteRole = message.guild.roles.cache.get(ROLA_MUTE_LICZENIE);
-                if (muteRole) {
-                    const member = message.member;
-                    await member.roles.add(muteRole);
-                    
-                    // Usuń rolę po 1h
-                    setTimeout(async () => {
-                        try {
-                            await member.roles.remove(muteRole);
-                            console.log(`Usunięto rolę mute liczenie dla ${member.user.tag}`);
-                        } catch (e) {
-                            console.error('Nie udało się usunąć roli:', e);
-                        }
-                    }, 60 * 60 * 1000); // 1 godzina
-                }
-                
-                // 3. Wyślij wiadomość o błędzie z rekordem
-                await message.channel.send(`❌ **${message.author.username}** nie potrafi liczyć! 😵\n🔄 Zaczynamy od nowa! 🔄\n🏆 Aktualny rekord to: **${licznik.rekord}** 👑`);
-                
-                // 4. Zresetuj licznik (zachowując rekord, resetując flagę wysłania)
-                await zapiszLicznik(0, "", licznik.rekord, false);
-                
-            } catch (error) {
-                console.error('Błąd podczas czyszczenia kanału:', error);
-                await message.channel.send('❌ Wystąpił błąd. Spróbuj ręcznie wyczyścić kanał.');
-            }
-        }
-    }
 });
 
 // Serwer HTTP dla Render
-const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
