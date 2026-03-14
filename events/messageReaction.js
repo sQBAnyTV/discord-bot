@@ -1,4 +1,4 @@
-const ReactionRole = require('../models/ReactionRole');
+const ReactionRole = require('../models/reactionrole');
 
 module.exports = (client) => {
     // Obsługa dodawania reakcji
