@@ -8,6 +8,10 @@ const commands = [
     {
         name: 'level',
         description: 'Pokazuje twój poziom i XP',
+    },
+    {
+        name: `top`,
+        description: `Pokazuje top 10 graczy z najwyższym poziomem`
     }
 ];
 

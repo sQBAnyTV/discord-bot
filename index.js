@@ -95,6 +95,34 @@ client.on('interactionCreate', async interaction => {
         
         await interaction.reply({ embeds: [embed] });
     }
+    
+    if (interaction.commandName === 'top') {
+        // Pobierz top 10 graczy (sortuj według level, potem XP)
+        const topGracze = await Gracz.find({})
+            .sort({ level: -1, xp: -1 })
+            .limit(10);
+        
+        if (topGracze.length === 0) {
+            return interaction.reply('📊 Jeszcze nie ma żadnych graczy w rankingu!');
+        }
+        
+        // Stwórz listę排名
+        let ranking = '';
+        for (let i = 0; i < topGracze.length; i++) {
+            const gracz = topGracze[i];
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '📌';
+            ranking += `${medal} **${i + 1}.** <@${gracz.userId}> – **Poziom ${gracz.level}** (${gracz.xp} XP)\n`;
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFF8C00)
+            .setTitle('🏆 TOP 10 graczy')
+            .setDescription(ranking)
+            .setFooter({ text: 'Gratulacje dla najlepszych!' })
+            .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed] });
+    }
 });
 
 // Nasłuchiwanie na wiadomości
