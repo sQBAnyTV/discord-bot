@@ -118,7 +118,6 @@ client.on('messageCreate', async message => {
                 // Dodaj XP
                 gracz.xp += XP_PER_MESSAGE;
                 gracz.totalMessages++;
-                gracz.lastMessageDate = now;
                 gracz.username = message.author.username; // aktualizuj nick
                 
                 // Sprawdź awans
