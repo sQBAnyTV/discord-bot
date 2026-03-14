@@ -4,10 +4,14 @@ const { parseTime } = require('../utils/xpUtils');
 module.exports = {
     name: 'mute',
     description: 'Wycisz użytkownika na określony czas (tylko moderator)',
-    async execute(interaction, client, ROLA_MODERATOR, KANAL_LOGOW) {
+    async execute(interaction, client, ROLA_HELPER, ROLA_MODERATOR) { // USUŃ KANAL_LOGOW z parametrów
+        // UŻYJ process.env BEZPOŚREDNIO!
+        const KANAL_LOGOW = process.env.KANAL_LOGOW;
+        
         console.log(`========== MUTE DEBUG ==========`);
-        console.log(`KANAL_LOGOW odebrany w komendzie: ${KANAL_LOGOW}`);
-        console.log(`Typ KANAL_LOGOW: ${typeof KANAL_LOGOW}`);
+        console.log(`ROLA_HELPER: ${ROLA_HELPER}`);
+        console.log(`ROLA_MODERATOR: ${ROLA_MODERATOR}`);
+        console.log(`KANAL_LOGOW z env: ${KANAL_LOGOW}`);
         
         const member = interaction.member;
         const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
@@ -16,7 +20,7 @@ module.exports = {
         if (!hasModRole && !isAdmin) {
             return interaction.reply({
                 content: '❌ Tylko moderatorzy mogą używać tej komendy!',
-                ephemeral: true
+                flags: 64
             });
         }
         
@@ -28,7 +32,7 @@ module.exports = {
         if (targetUser.id === moderator.id) {
             return interaction.reply({
                 content: '❌ Nie możesz wyciszyć samego siebie!',
-                ephemeral: true
+                flags: 64
             });
         }
         
@@ -36,7 +40,7 @@ module.exports = {
         if (!targetMember) {
             return interaction.reply({
                 content: '❌ Nie znaleziono użytkownika na serwerze!',
-                ephemeral: true
+                flags: 64
             });
         }
         
@@ -44,14 +48,14 @@ module.exports = {
         if (!muteTimeMs) {
             return interaction.reply({
                 content: '❌ Nieprawidłowy format czasu. Użyj: `10m`, `1h`, `1d`, `7d` (max 28 dni)',
-                ephemeral: true
+                flags: 64
             });
         }
         
         if (muteTimeMs > 28 * 24 * 60 * 60 * 1000) {
             return interaction.reply({
                 content: '❌ Maksymalny czas przerwy to 28 dni!',
-                ephemeral: true
+                flags: 64
             });
         }
         
@@ -77,10 +81,10 @@ module.exports = {
             
             await interaction.reply({
                 content: `✅ Użytkownik ${targetUser.tag} otrzymał przerwę na **${timeStr}**.`,
-                ephemeral: true
+                flags: 64
             });
             
-            // ========== LOGI DO KANAŁU ==========
+            // Log na kanał logów
             console.log(`Próba wysłania logu na kanał o ID: ${KANAL_LOGOW}`);
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             
@@ -103,28 +107,26 @@ module.exports = {
                 console.log(`✅ Wysłano log mute dla ${targetUser.tag}`);
             } else {
                 console.log(`❌ NIE znaleziono kanału o ID: ${KANAL_LOGOW}`);
-                console.log(`Lista dostępnych kanałów:`);
-                client.channels.cache.forEach(ch => {
-                    if (ch.isTextBased()) {
-                        console.log(`- ${ch.name}: ${ch.id}`);
-                    }
-                });
             }
             
         } catch (error) {
             console.error('Błąd przy mute:', error);
             
             if (error.code === 50013) {
-                return interaction.reply({
-                    content: '❌ Bot nie ma uprawnień do wyciszania! Sprawdź czy ma uprawnienie "Moderuj członków".',
-                    ephemeral: true
-                });
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: '❌ Bot nie ma uprawnień do wyciszania! Sprawdź czy ma uprawnienie "Moderuj członków".',
+                        flags: 64
+                    });
+                }
+            } else {
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: '❌ Wystąpił błąd podczas wyciszania.',
+                        flags: 64
+                    });
+                }
             }
-            
-            await interaction.reply({
-                content: '❌ Wystąpił błąd podczas wyciszania.',
-                ephemeral: true
-            });
         }
     }
 };
