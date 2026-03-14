@@ -35,14 +35,31 @@ module.exports = {
         }
         
         try {
+            // Zdejmij timeout
             await targetMember.timeout(null);
             
+            // 1. WYŚLIJ PW DO UŻYTKOWNIKA
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🔊 Przerwa zdjęta!')
+                .setDescription(`Na serwerze **${interaction.guild.name}**`)
+                .addFields(
+                    { name: 'Moderator', value: moderator.tag, inline: true }
+                )
+                .setTimestamp()
+                .setFooter({ text: 'Przerwa została zdjęta przed czasem.' });
+            
+            await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
+                console.log(`Nie udało się wysłać PW do ${targetUser.tag}`);
+            });
+            
+            // 2. POTWIERDZENIE DLA MODERATORA
             await interaction.reply({
                 content: `✅ Przerwa dla ${targetUser.tag} została zdjęta.`,
                 ephemeral: true
             });
             
-            // Log na kanał logów
+            // 3. WYŚLIJ LOG NA KANAŁ LOGÓW
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             if (logChannel) {
                 const logEmbed = new EmbedBuilder()
@@ -55,6 +72,9 @@ module.exports = {
                     .setTimestamp();
                 
                 await logChannel.send({ embeds: [logEmbed] });
+                console.log(`Wysłano log unmute dla ${targetUser.tag}`);
+            } else {
+                console.log(`Nie znaleziono kanału logów: ${KANAL_LOGOW}`);
             }
             
         } catch (error) {
