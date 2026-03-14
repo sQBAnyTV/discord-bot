@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const express = require('express');
+const Gracz = require('./models/gracz');
 
 const client = new Client({ 
     intents: [
@@ -12,9 +13,33 @@ const client = new Client({
 
 const token = process.env.TOKEN;
 const KANAL_PROPONOWANIA = process.env.KANAL_ID;
+const KANAL_LOGOW = process.env.KANAL_LOGOW;
 const MONGODB_URI = process.env.MONGODB_URI;
+const KANAL_KOMEND = process.env.KANAL_KOMEND;
 
-// Połączenie z MongoDB (opcjonalne - jeśli nie potrzebujesz, możesz usunąć)
+// Stałe levelowania
+const XP_PER_MESSAGE = 15; // XP za każdą wiadomość
+const LEVEL_MULTIPLIER = 100; // Każdy poziom wymaga: (level * LEVEL_MULTIPLIER) XP
+
+// Funkcja do obliczania wymaganego XP na dany poziom
+function wymaganeXp(level) {
+    return level * LEVEL_MULTIPLIER;
+}
+
+// Funkcja do sprawdzania czy gracz awansował
+async function sprawdzAwans(gracz) {
+    while (gracz.xp >= wymaganeXp(gracz.level + 1)) {
+        gracz.level++;
+        // Wyślij wiadomość o awansie
+        const channel = client.channels.cache.get(KANAL_LOGOW);
+        if (channel) {
+            await channel.send(`🎉 Gratulacje <@${gracz.userId}>! Awansowałeś na **poziom ${gracz.level}**! 🎉`);
+        }
+    }
+    await gracz.save();
+}
+
+// Połączenie z MongoDB
 mongoose.connect(MONGODB_URI)
     .then(() => {
         console.log('✅ Połączono z MongoDB Atlas!');
@@ -26,20 +51,85 @@ mongoose.connect(MONGODB_URI)
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`Nasłuchuję na kanale o ID: ${KANAL_PROPONOWANIA}`);
+    console.log(`Kanał logów: ${KANAL_LOGOW}`);
 });
 
 // Nasłuchiwanie na komendy slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
+    // Sprawdź czy komenda jest wpisana na dozwolonym kanale
+    if (interaction.channel.id !== KANAL_KOMEND) {
+        return interaction.reply({
+            content:`❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
+            ephemeral: true
+        });
+    }
+
     if (interaction.commandName === 'ping') {
         await interaction.reply('Pong! 🏓');
+    }
+    
+    if (interaction.commandName === 'level') {
+        const gracz = await Gracz.findOne({ userId: interaction.user.id });
+        
+        if (!gracz) {
+            return interaction.reply('📊 Jeszcze nie masz żadnego XP. Napisz coś na czacie!');
+        }
+        
+        const aktualneXp = gracz.xp;
+        const nastepnyLevel = gracz.level + 1;
+        const wymagane = wymaganeXp(nastepnyLevel);
+        const postep = Math.floor((aktualneXp / wymagane) * 100);
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFF8C00)
+            .setTitle(`📊 Poziom ${gracz.username}`)
+            .addFields(
+                { name: '📈 Poziom', value: gracz.level.toString(), inline: true },
+                { name: '✨ XP', value: `${aktualneXp} / ${wymagane}`, inline: true },
+                { name: '📝 Wiadomości', value: gracz.totalMessages.toString(), inline: true },
+                { name: '📊 Postęp', value: `[${postep}%]` }
+            )
+            .setTimestamp();
+        
+        await interaction.reply({ embeds: [embed] });
     }
 });
 
 // Nasłuchiwanie na wiadomości
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
+    
+    // -------------------- SYSTEM LEVELOWANIA --------------------
+    // Pomijamy kanał propozycji
+    if (message.channel.id !== KANAL_PROPONOWANIA) {
+        try {
+            let gracz = await Gracz.findOne({ userId: message.author.id });
+            
+            // Jeśli gracz nie istnieje, stwórz nowego
+            if (!gracz) {
+                gracz = new Gracz({
+                    userId: message.author.id,
+                    username: message.author.username
+                });
+            }
+            
+                // Dodaj XP
+                gracz.xp += XP_PER_MESSAGE;
+                gracz.totalMessages++;
+                gracz.lastMessageDate = now;
+                gracz.username = message.author.username; // aktualizuj nick
+                
+                // Sprawdź awans
+                await sprawdzAwans(gracz);
+                await gracz.save();
+                
+            
+           }   catch (error) {
+            console.error('Błąd systemu levelowania:', error);
+        }
+    }
     
     // -------------------- OBSŁUGA KANAŁU PROPOZYCJI --------------------
     if (message.channel.id === KANAL_PROPONOWANIA) {
