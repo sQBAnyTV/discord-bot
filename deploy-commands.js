@@ -56,13 +56,25 @@ const commands = [
         ]
     },
     {
+        name: 'unmute',
+        description: 'Zdejmij przerwę z użytkownika (tylko moderator)',
+        options: [
+            {
+                name: 'user',
+                description: 'Użytkownik do odciszenia',
+                type: 6,
+                required: true
+            }
+        ]
+    },
+    {
         name: 'reactionrole',
-        description: 'Dodaj reaction role (tylko moderator)',
+        description: 'Zarządzaj reaction role (tylko moderator)',
         options: [
             {
                 name: 'add',
                 description: 'Dodaj nowe reaction role',
-                type: 1, // SUB_COMMAND
+                type: 1,
                 options: [
                     {
                         name: 'message_id',
@@ -79,7 +91,7 @@ const commands = [
                     {
                         name: 'role',
                         description: 'Rola do nadania',
-                        type: 8, // ROLE
+                        type: 8,
                         required: true
                     }
                 ]
@@ -87,7 +99,7 @@ const commands = [
             {
                 name: 'remove',
                 description: 'Usuń reaction role',
-                type: 1, // SUB_COMMAND
+                type: 1,
                 options: [
                     {
                         name: 'message_id',
@@ -106,7 +118,7 @@ const commands = [
             {
                 name: 'list',
                 description: 'Pokaż listę reaction role dla wiadomości',
-                type: 1, // SUB_COMMAND
+                type: 1,
                 options: [
                     {
                         name: 'message_id',

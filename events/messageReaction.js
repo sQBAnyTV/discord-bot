@@ -20,10 +20,10 @@ module.exports = (client) => {
 
             if (role && member) {
                 await member.roles.add(role);
-                console.log(`Dodano rolę ${role.name} użytkownikowi ${user.tag}`);
+                console.log(`✅ Dodano rolę ${role.name} użytkownikowi ${user.tag}`);
             }
         } catch (error) {
-            console.error('Błąd przy dodawaniu roli z reakcji:', error);
+            console.error('❌ Błąd przy dodawaniu roli z reakcji:', error);
         }
     });
 
@@ -46,10 +46,10 @@ module.exports = (client) => {
 
             if (role && member) {
                 await member.roles.remove(role);
-                console.log(`Usunięto rolę ${role.name} użytkownikowi ${user.tag}`);
+                console.log(`✅ Usunięto rolę ${role.name} użytkownikowi ${user.tag}`);
             }
         } catch (error) {
-            console.error('Błąd przy usuwaniu roli z reakcji:', error);
+            console.error('❌ Błąd przy usuwaniu roli z reakcji:', error);
         }
     });
 };
