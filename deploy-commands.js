@@ -20,13 +20,37 @@ const commands = [
             {
                 name: 'user',
                 description: 'Użytkownik do ostrzeżenia',
-                type: 6, // USER
+                type: 6,
                 required: true
             },
             {
                 name: 'reason',
                 description: 'Powód ostrzeżenia',
-                type: 3, // STRING
+                type: 3,
+                required: true
+            }
+        ]
+    },
+    {
+        name: 'mute',
+        description: 'Wycisz użytkownika na określony czas (tylko moderator)',
+        options: [
+            {
+                name: 'user',
+                description: 'Użytkownik do wyciszenia',
+                type: 6,
+                required: true
+            },
+            {
+                name: 'time',
+                description: 'Czas (np. 10m, 1h, 1d)',
+                type: 3,
+                required: true
+            },
+            {
+                name: 'reason',
+                description: 'Powód wyciszenia',
+                type: 3,
                 required: true
             }
         ]

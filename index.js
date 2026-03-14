@@ -9,7 +9,8 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildModeration
     ] 
 });
 
@@ -24,8 +25,8 @@ const KANAL_KOMEND = process.env.KANAL_KOMEND;
 const KANAL_XP = '1473083672881139773';
 
 // ID ról które mogą dawać warny (ZMIEŃ NA SWOJE!)
-const ROLA_HELPER = '1472655317111410859';
-const ROLA_MODERATOR = '1472655181878526194';
+const ROLA_HELPER = 'WPISZ_TUTAJ_ID_ROLI_HELPER';
+const ROLA_MODERATOR = 'WPISZ_TUTAJ_ID_ROLI_MODERATOR';
 
 // Stałe levelowania
 const XP_PER_MESSAGE = 10; // XP za każdą wiadomość
@@ -56,6 +57,22 @@ async function sprawdzAwans(gracz) {
         }
     }
     await gracz.save();
+}
+
+// Funkcja do parsowania czasu (np. "10m", "1h", "2d")
+function parseTime(timeStr) {
+    const unit = timeStr.slice(-1);
+    const value = parseInt(timeStr.slice(0, -1));
+    
+    if (isNaN(value)) return null;
+    
+    switch(unit) {
+        case 's': return value * 1000; // sekundy
+        case 'm': return value * 60 * 1000; // minuty
+        case 'h': return value * 60 * 60 * 1000; // godziny
+        case 'd': return value * 24 * 60 * 60 * 1000; // dni
+        default: return null;
+    }
 }
 
 // Połączenie z MongoDB
@@ -234,6 +251,126 @@ client.on('interactionCreate', async interaction => {
             console.error('Błąd przy warn:', error);
             await interaction.reply({
                 content: '❌ Wystąpił błąd podczas zapisywania ostrzeżenia.',
+                ephemeral: true
+            });
+        }
+    }
+    
+    // -------------------- KOMENDA /MUTE --------------------
+    if (interaction.commandName === 'mute') {
+        // Sprawdź czy użytkownik ma rolę moderatora
+        const member = interaction.member;
+        const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
+        const isAdmin = member.permissions.has('Administrator');
+        
+        if (!hasModRole && !isAdmin) {
+            return interaction.reply({
+                content: '❌ Tylko moderatorzy mogą używać tej komendy!',
+                ephemeral: true
+            });
+        }
+        
+        // Pobierz dane
+        const targetUser = interaction.options.getUser('user');
+        const timeStr = interaction.options.getString('time');
+        const reason = interaction.options.getString('reason');
+        const moderator = interaction.user;
+        
+        // Sprawdź czy nie mutuje samego siebie
+        if (targetUser.id === moderator.id) {
+            return interaction.reply({
+                content: '❌ Nie możesz wyciszyć samego siebie!',
+                ephemeral: true
+            });
+        }
+        
+        // Pobierz członka serwera
+        const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+        if (!targetMember) {
+            return interaction.reply({
+                content: '❌ Nie znaleziono użytkownika na serwerze!',
+                ephemeral: true
+            });
+        }
+        
+        // Parsuj czas
+        const muteTimeMs = parseTime(timeStr);
+        if (!muteTimeMs) {
+            return interaction.reply({
+                content: '❌ Nieprawidłowy format czasu. Użyj: `10m`, `1h`, `1d`, `7d` (max 28 dni)',
+                ephemeral: true
+            });
+        }
+        
+        // Sprawdź czy nie przekracza 28 dni
+        if (muteTimeMs > 28 * 24 * 60 * 60 * 1000) {
+            return interaction.reply({
+                content: '❌ Maksymalny czas przerwy to 28 dni!',
+                ephemeral: true
+            });
+        }
+        
+        try {
+            // Oblicz datę zakończenia
+            const endDate = new Date(Date.now() + muteTimeMs);
+            
+            // Ustaw timeout (wbudowana funkcja Discorda!)
+            await targetMember.timeout(muteTimeMs, reason);
+            
+            // Wyślij PW do użytkownika
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🔇 Otrzymałeś przerwę!')
+                .setDescription(`Na serwerze **${interaction.guild.name}**`)
+                .addFields(
+                    { name: 'Moderator', value: moderator.tag, inline: true },
+                    { name: 'Czas', value: timeStr, inline: true },
+                    { name: 'Powód', value: reason, inline: false },
+                    { name: 'Koniec', value: `<t:${Math.floor(endDate.getTime() / 1000)}:R>`, inline: false }
+                )
+                .setTimestamp();
+            
+            await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
+                console.log(`Nie udało się wysłać PW do ${targetUser.tag}`);
+            });
+            
+            // Wyślij potwierdzenie moderatorowi
+            await interaction.reply({
+                content: `✅ Użytkownik ${targetUser.tag} otrzymał przerwę na **${timeStr}**.`,
+                ephemeral: true
+            });
+            
+            // Wyślij log na kanał logów
+            const logChannel = client.channels.cache.get(KANAL_LOGOW);
+            if (logChannel) {
+                const logEmbed = new EmbedBuilder()
+                    .setColor(0xFF8C00)
+                    .setTitle('🔇 Nowa przerwa (mute)')
+                    .addFields(
+                        { name: 'Użytkownik', value: `${targetUser.tag} (${targetUser.id})`, inline: true },
+                        { name: 'Moderator', value: `${moderator.tag} (${moderator.id})`, inline: true },
+                        { name: 'Czas', value: timeStr, inline: true },
+                        { name: 'Powód', value: reason, inline: false },
+                        { name: 'Koniec', value: `<t:${Math.floor(endDate.getTime() / 1000)}:R>`, inline: false }
+                    )
+                    .setTimestamp();
+                
+                await logChannel.send({ embeds: [logEmbed] });
+            }
+            
+        } catch (error) {
+            console.error('Błąd przy mute:', error);
+            
+            // Sprawdź czy błąd wynika z braku uprawnień
+            if (error.code === 50013) {
+                return interaction.reply({
+                    content: '❌ Bot nie ma uprawnień do wyciszania! Sprawdź czy ma uprawnienie "Moderuj członków".',
+                    ephemeral: true
+                });
+            }
+            
+            await interaction.reply({
+                content: '❌ Wystąpił błąd podczas wyciszania.',
                 ephemeral: true
             });
         }
