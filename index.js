@@ -18,12 +18,12 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const KANAL_KOMEND = process.env.KANAL_KOMEND;
 
 // Stałe levelowania
-const XP_PER_MESSAGE = 15; // XP za każdą wiadomość
-const LEVEL_MULTIPLIER = 100; // Każdy poziom wymaga: (level * LEVEL_MULTIPLIER) XP
+const XP_PER_MESSAGE = 10; // XP za każdą wiadomość
 
-// Funkcja do obliczania wymaganego XP na dany poziom
+// Funkcja do obliczania wymaganego XP na dany poziom (progresja geometryczna)
 function wymaganeXp(level) {
-    return level * LEVEL_MULTIPLIER;
+    if (level === 1) return 100;
+    return 100 * Math.pow(2, level - 1);
 }
 
 // Funkcja do sprawdzania czy gracz awansował
@@ -61,7 +61,7 @@ client.on('interactionCreate', async interaction => {
     // Sprawdź czy komenda jest wpisana na dozwolonym kanale
     if (interaction.channel.id !== KANAL_KOMEND) {
         return interaction.reply({
-            content:`❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
+            content: `❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
             ephemeral: true
         });
     }
@@ -115,17 +115,16 @@ client.on('messageCreate', async message => {
                 });
             }
             
-                // Dodaj XP
-                gracz.xp += XP_PER_MESSAGE;
-                gracz.totalMessages++;
-                gracz.username = message.author.username; // aktualizuj nick
-                
-                // Sprawdź awans
-                await sprawdzAwans(gracz);
-                await gracz.save();
-                
+            // Dodaj XP (10 za wiadomość)
+            gracz.xp += XP_PER_MESSAGE;
+            gracz.totalMessages++;
+            gracz.username = message.author.username; // aktualizuj nick
             
-           }   catch (error) {
+            // Sprawdź awans
+            await sprawdzAwans(gracz);
+            await gracz.save();
+            
+        } catch (error) {
             console.error('Błąd systemu levelowania:', error);
         }
     }
