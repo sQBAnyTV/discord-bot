@@ -4,7 +4,7 @@ const levelCommand = require('../commands/level');
 const topCommand = require('../commands/top');
 const warnCommand = require('../commands/warn');
 const muteCommand = require('../commands/mute');
-const unmuteCommand = require('../commands/unmute'); // DODAJ
+const unmuteCommand = require('../commands/unmute');
 const reactionroleCommand = require('../commands/reactionrole');
 
 // Mapa komend
@@ -14,11 +14,11 @@ commands.set(levelCommand.name, levelCommand);
 commands.set(topCommand.name, topCommand);
 commands.set(warnCommand.name, warnCommand);
 commands.set(muteCommand.name, muteCommand);
-commands.set(unmuteCommand.name, unmuteCommand); // DODAJ
+commands.set(unmuteCommand.name, unmuteCommand);
 commands.set(reactionroleCommand.name, reactionroleCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
-const komendyModeracyjne = ['warn', 'mute', 'unmute', 'reactionrole']; // DODAJ 'unmute'
+const komendyModeracyjne = ['warn', 'mute', 'unmute', 'reactionrole'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
@@ -41,10 +41,19 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             await command.execute(interaction, client, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW);
         } catch (error) {
             console.error(`Błąd w komendzie ${interaction.commandName}:`, error);
-            await interaction.reply({
-                content: '❌ Wystąpił błąd podczas wykonywania komendy.',
-                ephemeral: true
-            });
+            
+            // Sprawdź czy już odpowiedziano
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({
+                    content: '❌ Wystąpił błąd podczas wykonywania komendy.',
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ Wystąpił błąd podczas wykonywania komendy.',
+                    ephemeral: true
+                });
+            }
         }
     });
 };
