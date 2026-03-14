@@ -6,8 +6,8 @@ const commands = [
         description: 'Odpowiada Pong!',
     },
     {
-        name: 'rekord',
-        description: 'Pokazuje aktualny rekord liczenia',
+        name: 'level',
+        description: 'Pokazuje twój poziom i XP',
     }
 ];
 
