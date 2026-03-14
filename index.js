@@ -28,8 +28,8 @@ const KANAL_KOMEND = process.env.KANAL_KOMEND;
 const KANAL_XP = '1473083672881139773';
 
 // ID ról które mogą dawać warny (ZMIEŃ NA SWOJE!)
-const ROLA_HELPER = 'WPISZ_TUTAJ_ID_ROLI_HELPER';
-const ROLA_MODERATOR = 'WPISZ_TUTAJ_ID_ROLI_MODERATOR';
+const ROLA_HELPER = '1472655317111410859';
+const ROLA_MODERATOR = '1472655181878526194';
 
 // Stałe levelowania
 const XP_PER_MESSAGE = 10; // XP za każdą wiadomość
