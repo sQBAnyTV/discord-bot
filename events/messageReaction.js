@@ -34,6 +34,8 @@ module.exports = (client) => {
         try {
             if (reaction.partial) await reaction.fetch();
 
+            console.log(`Reakcja: ${reaction.emoji.name} na wiadomość ${reaction.message.id}`);
+            console.log(`Szukam w bazie: messageId=${reaction.message.id}, emoji=${reaction.emoji.name}`);
             const rr = await ReactionRole.findOne({
                 messageId: reaction.message.id,
                 emoji: reaction.emoji.name
