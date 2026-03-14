@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const express = require('express');
 const Gracz = require('./models/gracz');
-const Warn = require('./models/warn');
+const Warn = require('./models/Warn');
 
 const client = new Client({ 
     intents: [
@@ -96,12 +96,17 @@ client.once('ready', () => {
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
-    // Sprawdź czy komenda jest wpisana na dozwolonym kanale
-    if (interaction.channel.id !== KANAL_KOMEND) {
-        return interaction.reply({
-            content: `❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
-            ephemeral: true
-        });
+    // Lista komend moderacyjnych które mogą być używane wszędzie
+    const komendyModeracyjne = ['warn', 'mute'];
+    
+    // Jeśli komenda NIE jest moderacyjna, sprawdź kanał
+    if (!komendyModeracyjne.includes(interaction.commandName)) {
+        if (interaction.channel.id !== KANAL_KOMEND) {
+            return interaction.reply({
+                content: `❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
+                ephemeral: true
+            });
+        }
     }
 
     if (interaction.commandName === 'ping') {
