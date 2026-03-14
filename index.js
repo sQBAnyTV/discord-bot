@@ -45,8 +45,8 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const KANAL_KOMEND = process.env.KANAL_KOMEND;
 
 // ID ról (ZMIEŃ NA SWOJE!)
-const ROLA_HELPER = 'WPISZ_TUTAJ_ID_ROLI_HELPER';
-const ROLA_MODERATOR = 'WPISZ_TUTAJ_ID_ROLI_MODERATOR';
+const ROLA_HELPER = '1472655317111410859';
+const ROLA_MODERATOR = '1472655181878526194';
 
 // Mapy do śledzenia voice
 const voiceTimers = new Map();
