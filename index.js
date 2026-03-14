@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const express = require('express');
 const Gracz = require('./models/gracz');
+const Warn = require('./models/warn');
 
 const client = new Client({ 
     intents: [
@@ -15,11 +16,16 @@ const client = new Client({
 const token = process.env.TOKEN;
 const KANAL_PROPONOWANIA = process.env.KANAL_ID;
 const KANAL_LOGOW = process.env.KANAL_LOGOW;
+const KANAL_LEVEL = process.env.KANAL_LEVEL;
 const MONGODB_URI = process.env.MONGODB_URI;
 const KANAL_KOMEND = process.env.KANAL_KOMEND;
 
-// Kanał na którym można zdobywać XP (TEN KONKRETNY)
+// Kanał na którym można zdobywać XP
 const KANAL_XP = '1473083672881139773';
+
+// ID ról które mogą dawać warny (ZMIEŃ NA SWOJE!)
+const ROLA_HELPER = 'WPISZ_TUTAJ_ID_ROLI_HELPER';
+const ROLA_MODERATOR = 'WPISZ_TUTAJ_ID_ROLI_MODERATOR';
 
 // Stałe levelowania
 const XP_PER_MESSAGE = 10; // XP za każdą wiadomość
@@ -43,8 +49,8 @@ function wymaganeXp(level) {
 async function sprawdzAwans(gracz) {
     while (gracz.xp >= wymaganeXp(gracz.level + 1)) {
         gracz.level++;
-        // Wyślij wiadomość o awansie
-        const channel = client.channels.cache.get(KANAL_LOGOW);
+        // Wyślij wiadomość o awansie na KANAŁ LEVEL
+        const channel = client.channels.cache.get(KANAL_LEVEL);
         if (channel) {
             await channel.send(`🎉 Gratulacje <@${gracz.userId}>! Awansowałeś na **poziom ${gracz.level}**! 🎉`);
         }
@@ -64,7 +70,8 @@ mongoose.connect(MONGODB_URI)
 client.once('ready', () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`Nasłuchuję na kanale o ID: ${KANAL_PROPONOWANIA}`);
-    console.log(`Kanał logów: ${KANAL_LOGOW}`);
+    console.log(`Kanał logów (warny): ${KANAL_LOGOW}`);
+    console.log(`Kanał level (awanse): ${KANAL_LEVEL}`);
     console.log(`Kanał XP: ${KANAL_XP}`);
 });
 
@@ -136,6 +143,100 @@ client.on('interactionCreate', async interaction => {
             .setTimestamp();
         
         await interaction.reply({ embeds: [embed] });
+    }
+    
+    // -------------------- KOMENDA /WARN --------------------
+    if (interaction.commandName === 'warn') {
+        // Sprawdź czy użytkownik ma rolę helpera LUB moderatora
+        const member = interaction.member;
+        const hasHelperRole = member.roles.cache.has(ROLA_HELPER);
+        const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
+        const isAdmin = member.permissions.has('Administrator');
+        
+        if (!hasHelperRole && !hasModRole && !isAdmin) {
+            return interaction.reply({
+                content: '❌ Tylko osoby z rolą **Helper** lub **Moderator** mogą używać tej komendy!',
+                ephemeral: true
+            });
+        }
+        
+        // Pobierz dane
+        const targetUser = interaction.options.getUser('user');
+        const reason = interaction.options.getString('reason');
+        const moderator = interaction.user;
+        
+        // Sprawdź czy nie ostrzega samego siebie
+        if (targetUser.id === moderator.id) {
+            return interaction.reply({
+                content: '❌ Nie możesz ostrzec samego siebie!',
+                ephemeral: true
+            });
+        }
+        
+        // Sprawdź czy użytkownik jest na serwerze
+        const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+        if (!targetMember) {
+            return interaction.reply({
+                content: '❌ Nie znaleziono użytkownika na serwerze!',
+                ephemeral: true
+            });
+        }
+        
+        try {
+            // 1. Zapisz warn w bazie danych
+            const warn = new Warn({
+                userId: targetUser.id,
+                moderatorId: moderator.id,
+                reason: reason,
+                guildId: interaction.guild.id
+            });
+            await warn.save();
+            
+            // 2. Wyślij PW do użytkownika
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0xFF0000) // Czerwony
+                .setTitle('⚠️ Otrzymałeś ostrzeżenie!')
+                .setDescription(`Na serwerze **${interaction.guild.name}**`)
+                .addFields(
+                    { name: 'Moderator', value: moderator.tag, inline: true },
+                    { name: 'Powód', value: reason, inline: false }
+                )
+                .setTimestamp()
+                .setFooter({ text: 'Ostrzeżenie zostało zapisane w bazie danych.' });
+            
+            await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
+                console.log(`Nie udało się wysłać PW do ${targetUser.tag}`);
+            });
+            
+            // 3. Wyślij potwierdzenie moderatorowi
+            await interaction.reply({
+                content: `✅ Ostrzeżenie dla ${targetUser.tag} zostało zapisane. Użytkownik został powiadomiony PW.`,
+                ephemeral: true
+            });
+            
+            // 4. Wyślij log na kanał logów (KANAL_LOGOW)
+            const logChannel = client.channels.cache.get(KANAL_LOGOW);
+            if (logChannel) {
+                const logEmbed = new EmbedBuilder()
+                    .setColor(0xFF8C00)
+                    .setTitle('⚠️ Nowe ostrzeżenie')
+                    .addFields(
+                        { name: 'Użytkownik', value: `${targetUser.tag} (${targetUser.id})`, inline: true },
+                        { name: 'Moderator', value: `${moderator.tag} (${moderator.id})`, inline: true },
+                        { name: 'Powód', value: reason, inline: false }
+                    )
+                    .setTimestamp();
+                
+                await logChannel.send({ embeds: [logEmbed] });
+            }
+            
+        } catch (error) {
+            console.error('Błąd przy warn:', error);
+            await interaction.reply({
+                content: '❌ Wystąpił błąd podczas zapisywania ostrzeżenia.',
+                ephemeral: true
+            });
+        }
     }
 });
 
