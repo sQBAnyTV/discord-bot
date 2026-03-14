@@ -4,7 +4,7 @@ module.exports = {
     name: 'unmute',
     description: 'Zdejmij przerwę z użytkownika (tylko moderator)',
     async execute(interaction, client, ROLA_MODERATOR, KANAL_LOGOW) {
-        // Sprawdź czy użytkownik ma rolę moderatora
+        // Sprawdź uprawnienia
         const member = interaction.member;
         const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
         const isAdmin = member.permissions.has('Administrator');
@@ -16,11 +16,9 @@ module.exports = {
             });
         }
         
-        // Pobierz dane
         const targetUser = interaction.options.getUser('user');
         const moderator = interaction.user;
         
-        // Sprawdź czy nie próbuje odciszyć samego siebie
         if (targetUser.id === moderator.id) {
             return interaction.reply({
                 content: '❌ Nie możesz zdjąć przerwy samemu sobie!',
@@ -28,7 +26,6 @@ module.exports = {
             });
         }
         
-        // Pobierz członka serwera
         const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
         if (!targetMember) {
             return interaction.reply({
@@ -37,40 +34,15 @@ module.exports = {
             });
         }
         
-        // Sprawdź czy użytkownik w ogóle ma timeout
-        if (!targetMember.communicationDisabledUntil) {
-            return interaction.reply({
-                content: `❌ Użytkownik ${targetUser.tag} nie ma aktywnej przerwy.`,
-                ephemeral: true
-            });
-        }
-        
         try {
-            // Zdejmij timeout (ustaw na null)
             await targetMember.timeout(null);
             
-            // Wyślij PW do użytkownika
-            const dmEmbed = new EmbedBuilder()
-                .setColor(0x00FF00)
-                .setTitle('🔊 Przerwa zdjęta!')
-                .setDescription(`Na serwerze **${interaction.guild.name}**`)
-                .addFields(
-                    { name: 'Moderator', value: moderator.tag, inline: true }
-                )
-                .setTimestamp()
-                .setFooter({ text: 'Przerwa została zdjęta przed czasem.' });
-            
-            await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
-                console.log(`Nie udało się wysłać PW do ${targetUser.tag}`);
-            });
-            
-            // Wyślij potwierdzenie moderatorowi
             await interaction.reply({
                 content: `✅ Przerwa dla ${targetUser.tag} została zdjęta.`,
                 ephemeral: true
             });
             
-            // Wyślij log na kanał logów
+            // Log na kanał logów
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             if (logChannel) {
                 const logEmbed = new EmbedBuilder()
@@ -87,14 +59,6 @@ module.exports = {
             
         } catch (error) {
             console.error('Błąd przy unmute:', error);
-            
-            if (error.code === 50013) {
-                return interaction.reply({
-                    content: '❌ Bot nie ma uprawnień do zarządzania przerwami!',
-                    ephemeral: true
-                });
-            }
-            
             await interaction.reply({
                 content: '❌ Wystąpił błąd podczas zdejmowania przerwy.',
                 ephemeral: true
