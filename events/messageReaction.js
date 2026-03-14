@@ -2,6 +2,8 @@ const ReactionRole = require('../models/reactionrole');
 
 module.exports = (client) => {
     // Obsługa dodawania reakcji
+    console.log('✅ Rejestruję eventy reakcji...'); // DODAJ TO
+    
     client.on('messageReactionAdd', async (reaction, user) => {
         if (user.bot) return;
 
