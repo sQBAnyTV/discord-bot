@@ -27,6 +27,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         const command = commands.get(interaction.commandName);
         if (!command) return;
 
+        // Logi debugowania
         console.log(`Wykonuję komendę: ${interaction.commandName}`);
         console.log(`KANAL_LOGOW w interactionCreate: ${KANAL_LOGOW}`);
 
@@ -47,15 +48,23 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             
             // Sprawdź czy już odpowiedziano
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({
-                    content: '❌ Wystąpił błąd podczas wykonywania komendy.',
-                    ephemeral: true
-                });
+                try {
+                    await interaction.followUp({
+                        content: '❌ Wystąpił błąd podczas wykonywania komendy.',
+                        ephemeral: true
+                    });
+                } catch (e) {
+                    console.error('Nie udało się wysłać followUp:', e);
+                }
             } else {
-                await interaction.reply({
-                    content: '❌ Wystąpił błąd podczas wykonywania komendy.',
-                    ephemeral: true
-                });
+                try {
+                    await interaction.reply({
+                        content: '❌ Wystąpił błąd podczas wykonywania komendy.',
+                        ephemeral: true
+                    });
+                } catch (e) {
+                    console.error('Nie udało się wysłać reply:', e);
+                }
             }
         }
     });
