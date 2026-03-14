@@ -27,6 +27,9 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         const command = commands.get(interaction.commandName);
         if (!command) return;
 
+        console.log(`Wykonuję komendę: ${interaction.commandName}`);
+        console.log(`KANAL_LOGOW w interactionCreate: ${KANAL_LOGOW}`);
+
         // Sprawdź ograniczenia kanału
         if (!komendyModeracyjne.includes(interaction.commandName)) {
             if (interaction.channel.id !== KANAL_KOMEND) {

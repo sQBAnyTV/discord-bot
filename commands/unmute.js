@@ -5,6 +5,7 @@ module.exports = {
     description: 'Zdejmij przerwę z użytkownika (tylko moderator)',
     async execute(interaction, client, ROLA_MODERATOR, KANAL_LOGOW) {
         // Sprawdź uprawnienia
+        console.log(`KANAL_LOGOW w komendzie ${this.name}: ${KANAL_LOGOW}`);
         const member = interaction.member;
         const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
         const isAdmin = member.permissions.has('Administrator');
