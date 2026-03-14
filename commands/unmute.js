@@ -3,10 +3,11 @@ const { EmbedBuilder } = require('discord.js');
 module.exports = {
     name: 'unmute',
     description: 'Zdejmij przerwę z użytkownika (tylko moderator)',
-    async execute(interaction, client, ROLA_MODERATOR, KANAL_LOGOW) {
+    async execute(interaction, client, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) {
         console.log(`========== UNMUTE DEBUG ==========`);
-        console.log(`KANAL_LOGOW odebrany w komendzie: ${KANAL_LOGOW}`);
-        console.log(`Typ KANAL_LOGOW: ${typeof KANAL_LOGOW}`);
+        console.log(`ROLA_HELPER: ${ROLA_HELPER}`);
+        console.log(`ROLA_MODERATOR: ${ROLA_MODERATOR}`);
+        console.log(`KANAL_LOGOW: ${KANAL_LOGOW}`);
         
         // Sprawdź uprawnienia
         const member = interaction.member;
@@ -42,7 +43,7 @@ module.exports = {
             // Zdejmij timeout
             await targetMember.timeout(null);
             
-            // 1. WYŚLIJ PW DO UŻYTKOWNIKA
+            // Wyślij PW do użytkownika
             const dmEmbed = new EmbedBuilder()
                 .setColor(0x00FF00)
                 .setTitle('🔊 Przerwa zdjęta!')
@@ -57,13 +58,13 @@ module.exports = {
                 console.log(`Nie udało się wysłać PW do ${targetUser.tag}`);
             });
             
-            // 2. POTWIERDZENIE DLA MODERATORA
+            // Potwierdzenie dla moderatora
             await interaction.reply({
                 content: `✅ Przerwa dla ${targetUser.tag} została zdjęta.`,
                 ephemeral: true
             });
             
-            // 3. WYŚLIJ LOG NA KANAŁ LOGÓW
+            // Log na kanał logów
             console.log(`Próba wysłania logu na kanał o ID: ${KANAL_LOGOW}`);
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             
@@ -83,16 +84,18 @@ module.exports = {
                 console.log(`✅ Wysłano log unmute dla ${targetUser.tag}`);
             } else {
                 console.log(`❌ NIE znaleziono kanału o ID: ${KANAL_LOGOW}`);
-                console.log(`Lista dostępnych kanałów:`);
-                client.channels.cache.forEach(ch => {
-                    if (ch.isTextBased()) {
-                        console.log(`- ${ch.name}: ${ch.id}`);
-                    }
-                });
             }
             
         } catch (error) {
             console.error('Błąd przy unmute:', error);
+            
+            if (error.code === 50013) {
+                return interaction.reply({
+                    content: '❌ Bot nie ma uprawnień do zarządzania przerwami! Sprawdź uprawnienia.',
+                    ephemeral: true
+                });
+            }
+            
             await interaction.reply({
                 content: '❌ Wystąpił błąd podczas zdejmowania przerwy.',
                 ephemeral: true
