@@ -4,8 +4,11 @@ module.exports = {
     name: 'unmute',
     description: 'Zdejmij przerwę z użytkownika (tylko moderator)',
     async execute(interaction, client, ROLA_MODERATOR, KANAL_LOGOW) {
+        console.log(`========== UNMUTE DEBUG ==========`);
+        console.log(`KANAL_LOGOW odebrany w komendzie: ${KANAL_LOGOW}`);
+        console.log(`Typ KANAL_LOGOW: ${typeof KANAL_LOGOW}`);
+        
         // Sprawdź uprawnienia
-        console.log(`KANAL_LOGOW w komendzie ${this.name}: ${KANAL_LOGOW}`);
         const member = interaction.member;
         const hasModRole = member.roles.cache.has(ROLA_MODERATOR);
         const isAdmin = member.permissions.has('Administrator');
@@ -61,8 +64,12 @@ module.exports = {
             });
             
             // 3. WYŚLIJ LOG NA KANAŁ LOGÓW
+            console.log(`Próba wysłania logu na kanał o ID: ${KANAL_LOGOW}`);
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
+            
             if (logChannel) {
+                console.log(`✅ Znaleziono kanał: ${logChannel.name} (${logChannel.id})`);
+                
                 const logEmbed = new EmbedBuilder()
                     .setColor(0x00FF00)
                     .setTitle('🔊 Przerwa zdjęta (unmute)')
@@ -73,9 +80,15 @@ module.exports = {
                     .setTimestamp();
                 
                 await logChannel.send({ embeds: [logEmbed] });
-                console.log(`Wysłano log unmute dla ${targetUser.tag}`);
+                console.log(`✅ Wysłano log unmute dla ${targetUser.tag}`);
             } else {
-                console.log(`Nie znaleziono kanału logów: ${KANAL_LOGOW}`);
+                console.log(`❌ NIE znaleziono kanału o ID: ${KANAL_LOGOW}`);
+                console.log(`Lista dostępnych kanałów:`);
+                client.channels.cache.forEach(ch => {
+                    if (ch.isTextBased()) {
+                        console.log(`- ${ch.name}: ${ch.id}`);
+                    }
+                });
             }
             
         } catch (error) {
