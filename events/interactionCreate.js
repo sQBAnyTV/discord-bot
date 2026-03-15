@@ -48,13 +48,35 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 }
             }
             
-            // Znajdź kategorię kanałów (musisz utworzyć na serwerze)
-            const categoryChannel = guild.channels.cache.find(c => 
-                c.type === 4 && c.name === 'TICKETY'
+            // === WYBÓR / TWORZENIE KATEGORII ===
+            let categoryName;
+            if (category === 'rekrutacja') {
+                categoryName = '╭─・📋 Rekrutacja';
+            } else {
+                categoryName = '╭─・❓ Inne';
+            }
+            
+            let categoryChannel = guild.channels.cache.find(c => 
+                c.type === 4 && c.name === categoryName
             );
             
             if (!categoryChannel) {
-                return interaction.editReply('❌ Nie znaleziono kategorii "TICKETY"! Utwórz kategorię o nazwie TICKETY');
+                try {
+                    categoryChannel = await guild.channels.create({
+                        name: categoryName,
+                        type: 4,
+                        permissionOverwrites: [
+                            {
+                                id: guild.id,
+                                allow: ['ViewChannel']
+                            }
+                        ]
+                    });
+                    console.log(`✅ Utworzono kategorię: ${categoryName}`);
+                } catch (error) {
+                    console.error(`❌ Błąd tworzenia kategorii ${categoryName}:`, error);
+                    return interaction.editReply('❌ Wystąpił błąd podczas tworzenia kategorii.');
+                }
             }
             
             // Generuj ID ticketa
@@ -132,7 +154,6 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         // ========== OBSŁUGA ZAMYKANIA TICKETÓW ==========
         if (interaction.isButton() && interaction.customId.startsWith('close_ticket_')) {
             const Ticket = require('../models/ticket');
-            const { EmbedBuilder } = require('discord.js');
             
             await interaction.deferReply();
             
