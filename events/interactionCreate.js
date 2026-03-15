@@ -6,8 +6,9 @@ const warnCommand = require('../commands/warn');
 const muteCommand = require('../commands/mute');
 const unmuteCommand = require('../commands/unmute');
 const banCommand = require('../commands/ban');
-const reactionroleCommand = require('../commands/reactionrole');
 const unbanCommand = require('../commands/unban');
+const reactionroleCommand = require('../commands/reactionrole');
+const ticketCommand = require('../commands/ticket');
 
 // Mapa komend
 const commands = new Map();
@@ -17,15 +18,176 @@ commands.set(topCommand.name, topCommand);
 commands.set(warnCommand.name, warnCommand);
 commands.set(muteCommand.name, muteCommand);
 commands.set(unmuteCommand.name, unmuteCommand);
-commands.set(banCommand.name, banCommand); 
-commands.set(reactionroleCommand.name, reactionroleCommand);
+commands.set(banCommand.name, banCommand);
 commands.set(unbanCommand.name, unbanCommand);
+commands.set(reactionroleCommand.name, reactionroleCommand);
+commands.set(ticketCommand.name, ticketCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
-const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole'];
+const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
+        
+        // ========== OBSŁUGA BUTTONÓW TICKETOWYCH ==========
+        if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
+            const Ticket = require('../models/ticket');
+            
+            await interaction.deferReply({ flags: 64 });
+            
+            const category = interaction.customId.replace('ticket_', ''); // "rekrutacja" lub "inne"
+            const userId = interaction.user.id;
+            const guild = interaction.guild;
+            
+            // Sprawdź czy użytkownik ma już otwarty ticket
+            const existingTicket = await Ticket.findOne({ userId, status: 'open' });
+            if (existingTicket) {
+                const channel = guild.channels.cache.get(existingTicket.channelId);
+                if (channel) {
+                    return interaction.editReply(`❌ Masz już otwarty ticket: ${channel}`);
+                }
+            }
+            
+            // Znajdź kategorię kanałów (musisz utworzyć na serwerze)
+            const categoryChannel = guild.channels.cache.find(c => 
+                c.type === 4 && c.name === 'TICKETY'
+            );
+            
+            if (!categoryChannel) {
+                return interaction.editReply('❌ Nie znaleziono kategorii "TICKETY"! Utwórz kategorię o nazwie TICKETY');
+            }
+            
+            // Generuj ID ticketa
+            const ticketCount = await Ticket.countDocuments();
+            const ticketId = String(ticketCount + 1).padStart(4, '0');
+            
+            try {
+                // Utwórz kanał
+                const channel = await guild.channels.create({
+                    name: `ticket-${ticketId}`,
+                    type: 0,
+                    parent: categoryChannel.id,
+                    permissionOverwrites: [
+                        {
+                            id: guild.id,
+                            deny: ['ViewChannel']
+                        },
+                        {
+                            id: userId,
+                            allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory']
+                        },
+                        {
+                            id: process.env.STAFF_ROLE_ID,
+                            allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory']
+                        }
+                    ]
+                });
+                
+                // Zapisz w bazie
+                const ticket = new Ticket({
+                    ticketId,
+                    channelId: channel.id,
+                    userId,
+                    userName: interaction.user.tag,
+                    category
+                });
+                await ticket.save();
+                
+                // Wyślij powitanie
+                const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+                
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle(`🎫 Ticket #${ticketId}`)
+                    .setDescription(`Witaj ${interaction.user}!`)
+                    .addFields(
+                        { name: 'Kategoria', value: category === 'rekrutacja' ? '📋 Rekrutacja' : '❓ Inne', inline: true },
+                        { name: 'Status', value: 'Otwarty', inline: true }
+                    )
+                    .setTimestamp();
+                
+                const closeButton = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`close_ticket_${ticketId}`)
+                        .setLabel('🔒 Zamknij ticket')
+                        .setStyle(ButtonStyle.Danger)
+                );
+                
+                await channel.send({ 
+                    content: `<@${userId}>`, 
+                    embeds: [embed], 
+                    components: [closeButton] 
+                });
+                
+                await interaction.editReply(`✅ Utworzono ticket: ${channel}`);
+                
+            } catch (error) {
+                console.error('❌ Błąd przy tworzeniu ticketa:', error);
+                await interaction.editReply('❌ Wystąpił błąd podczas tworzenia ticketa.');
+            }
+            
+            return;
+        }
+        
+        // ========== OBSŁUGA ZAMYKANIA TICKETÓW ==========
+        if (interaction.isButton() && interaction.customId.startsWith('close_ticket_')) {
+            const Ticket = require('../models/ticket');
+            const { EmbedBuilder } = require('discord.js');
+            
+            await interaction.deferReply();
+            
+            const ticketId = interaction.customId.replace('close_ticket_', '');
+            const channel = interaction.channel;
+            
+            // Znajdź ticket w bazie
+            const ticket = await Ticket.findOne({ ticketId });
+            if (!ticket) {
+                return interaction.editReply('❌ Nie znaleziono ticketa w bazie!');
+            }
+            
+            // Zaktualizuj status
+            ticket.status = 'closed';
+            ticket.closedAt = new Date();
+            await ticket.save();
+            
+            // Wygeneruj prosty transkrypt
+            const messages = await channel.messages.fetch({ limit: 100 });
+            let transcript = `Ticket #${ticketId} - ${ticket.userName}\n`;
+            transcript += `Kategoria: ${ticket.category}\n`;
+            transcript += `Utworzono: ${ticket.createdAt}\n`;
+            transcript += `Zamknięto: ${new Date()}\n`;
+            transcript += `Zamknięte przez: ${interaction.user.tag}\n\n`;
+            transcript += `=== WIADOMOŚCI ===\n\n`;
+            
+            const messagesArray = Array.from(messages.values()).reverse();
+            messagesArray.forEach(msg => {
+                if (!msg.author.bot || msg.content) {
+                    transcript += `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content || '[brak treści]'}\n`;
+                }
+            });
+            
+            // Wyślij transkrypt na kanał logów
+            const logChannel = client.channels.cache.get(KANAL_LOGOW);
+            if (logChannel) {
+                const buffer = Buffer.from(transcript, 'utf-8');
+                await logChannel.send({
+                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag}`,
+                    files: [{ attachment: buffer, name: `ticket-${ticketId}.txt` }]
+                });
+            }
+            
+            // Wyślij potwierdzenie
+            await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
+            
+            // Usuń kanał po 5 sekundach
+            setTimeout(() => {
+                channel.delete().catch(console.error);
+            }, 5000);
+            
+            return;
+        }
+        
+        // ========== OBSŁUGA KOMEND SLASH ==========
         if (!interaction.isCommand()) return;
 
         const command = commands.get(interaction.commandName);
@@ -40,7 +202,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             if (interaction.channel.id !== KANAL_KOMEND) {
                 return interaction.reply({
                     content: `❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
-                    ephemeral: true
+                    flags: 64
                 });
             }
         }
@@ -50,12 +212,11 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         } catch (error) {
             console.error(`Błąd w komendzie ${interaction.commandName}:`, error);
             
-            // Sprawdź czy już odpowiedziano
             if (interaction.replied || interaction.deferred) {
                 try {
                     await interaction.followUp({
                         content: '❌ Wystąpił błąd podczas wykonywania komendy.',
-                        ephemeral: true
+                        flags: 64
                     });
                 } catch (e) {
                     console.error('Nie udało się wysłać followUp:', e);
@@ -64,7 +225,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 try {
                     await interaction.reply({
                         content: '❌ Wystąpił błąd podczas wykonywania komendy.',
-                        ephemeral: true
+                        flags: 64
                     });
                 } catch (e) {
                     console.error('Nie udało się wysłać reply:', e);

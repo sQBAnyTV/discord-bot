@@ -2,6 +2,10 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'setup-ticket',
+    description: 'Tworzy panel ticketowy (tylko admin)'
+    },
+    {
     name: 'unban',
     description: 'Odbanuj użytkownika (tylko moderator)',
     options: [
