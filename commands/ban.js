@@ -53,14 +53,8 @@ module.exports = {
             }
         }
         
+        // Najpierw spróbuj wysłać PW (jeszcze przed banem)
         try {
-            // Wykonaj bana
-            await interaction.guild.members.ban(targetUser.id, { 
-                reason: `Moderator: ${moderator.tag} | Powód: ${reason}`,
-                deleteMessageSeconds: deleteDays * 24 * 60 * 60
-            });
-            
-            // Wyślij PW do użytkownika (jeśli możliwe)
             const dmEmbed = new EmbedBuilder()
                 .setColor(0xFF0000)
                 .setTitle('🔨 Zostałeś zbanowany!')
@@ -72,10 +66,18 @@ module.exports = {
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Ban został wykonany przez moderatora.' });
-            
-            await targetUser.send({ embeds: [dmEmbed] }).catch(() => {
-                console.log(`Nie udało się wysłać PW do ${targetUser.tag} (prawdopodobnie ma zamknięte PW)`);
-            });
+
+            await targetUser.send({ embeds: [dmEmbed] });
+            console.log(`✅ Wysłano PW do ${targetUser.tag} przed banem`);
+        } catch (error) {
+            console.log(`❌ Nie udało się wysłać PW do ${targetUser.tag} (prawdopodobnie ma zamknięte PW)`);
+        }
+
+        // Teraz wykonaj bana
+        await interaction.guild.members.ban(targetUser.id, { 
+            reason: `Moderator: ${moderator.tag} | Powód: ${reason}`,
+            deleteMessageSeconds: deleteDays * 24 * 60 * 60
+        });
             
             // Potwierdzenie dla moderatora
             await interaction.reply({
