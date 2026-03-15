@@ -1,42 +1,10 @@
 const { REST, Routes } = require('discord.js');
-const { description } = require('./commands/reactionrole');
 
 const commands = [
     {
         name: 'ping',
         description: 'Odpowiada Pong!',
     },
-    
-    {
-        name: 'ban',
-        description:`Zbanuj użytkownika`,
-        options: [
-            {   name: 'user',
-                description: 'Podaj nick użytkownika',
-                type: 6,
-                require: true
-            },
-            {
-                name: 'reason',
-                description: `Podaj powód bana`,
-                type: 3,
-                require: true
-            },
-            {
-                name: 'delete_message',
-                description: 'Podaj z ilu dni chcesz usunąć wiadomości',
-                type: 4,
-                require: false,
-                choices: [
-                    {name: 'Nie usuwaj', value: 0},
-                    {name: 'Ostatnie 24h', value: 1},
-                    {name: 'Ostatnie 3 dni', value: 3},
-                    {name: 'Ostatnie 7 dni', value: 7}
-                ]
-            }
-        ]    
-    },
-
     {
         name: 'level',
         description: 'Pokazuje twój poziom i XP',
@@ -96,6 +64,36 @@ const commands = [
                 description: 'Użytkownik do odciszenia',
                 type: 6,
                 required: true
+            }
+        ]
+    },
+    {
+        name: 'ban',
+        description: 'Zbanuj użytkownika (tylko moderator)',
+        options: [
+            {
+                name: 'user',
+                description: 'Użytkownik do zbanowania',
+                type: 6,
+                required: true
+            },
+            {
+                name: 'reason',
+                description: 'Powód bana',
+                type: 3,
+                required: true
+            },
+            {
+                name: 'delete_messages',
+                description: 'Usuń wiadomości (0-7 dni)',
+                type: 4,
+                required: false,
+                choices: [
+                    { name: 'Nie usuwaj', value: 0 },
+                    { name: 'Ostatnie 24h', value: 1 },
+                    { name: 'Ostatnie 3 dni', value: 3 },
+                    { name: 'Ostatnie 7 dni', value: 7 }
+                ]
             }
         ]
     },
@@ -172,10 +170,12 @@ const rest = new REST({ version: '10' }).setToken(token);
 (async () => {
     try {
         console.log('Rozpoczęto rejestrację komend...');
+        
         await rest.put(
             Routes.applicationCommands(clientId),
             { body: commands },
         );
+        
         console.log('✅ Komendy zostały zarejestrowane!');
     } catch (error) {
         console.error('❌ Błąd podczas rejestracji:', error);
