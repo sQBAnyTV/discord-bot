@@ -54,7 +54,13 @@ module.exports = {
         }
         
         try {
-            // 1. NAJPIERW wyślij PW (jeszcze przed banem)
+            // 1. NATYCHMIASTOWA odpowiedź (żeby interakcja nie wygasła)
+            await interaction.reply({
+                content: `⏳ Banowanie ${targetUser.tag}...`,
+                flags: 64
+            });
+            
+            // 2. Wyślij PW (przed banem)
             let dmSent = false;
             try {
                 const dmEmbed = new EmbedBuilder()
@@ -76,23 +82,22 @@ module.exports = {
                 console.log(`❌ Nie udało się wysłać PW do ${targetUser.tag} (prawdopodobnie ma zamknięte PW)`);
             }
             
-            // 2. TERAZ wykonaj bana
+            // 3. Wykonaj bana
             await interaction.guild.members.ban(targetUser.id, { 
                 reason: `Moderator: ${moderator.tag} | Powód: ${reason}`,
                 deleteMessageSeconds: deleteDays * 24 * 60 * 60
             });
             
-            // 3. Potwierdzenie dla moderatora
+            // 4. Zaktualizuj pierwszą odpowiedź
             const confirmMessage = dmSent 
                 ? `✅ Użytkownik ${targetUser.tag} został zbanowany i otrzymał powiadomienie PW.`
                 : `✅ Użytkownik ${targetUser.tag} został zbanowany. (Nie udało się wysłać PW)`;
             
-            await interaction.reply({
-                content: confirmMessage,
-                flags: 64
+            await interaction.editReply({
+                content: confirmMessage
             });
             
-            // 4. Log na kanał logów
+            // 5. Log na kanał logów
             console.log(`Próba wysłania logu bana na kanał o ID: ${KANAL_LOGOW}`);
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             
@@ -135,11 +140,21 @@ module.exports = {
                 errorMessage = '❌ Nieprawidłowe dane - użytkownik może nie istnieć.';
             }
             
+            // Sprawdź czy już odpowiedziano
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: errorMessage,
                     flags: 64
                 });
+            } else {
+                // Próbuj edytować jeśli już odpowiedziano
+                try {
+                    await interaction.editReply({
+                        content: errorMessage
+                    });
+                } catch (editError) {
+                    console.error('❌ Nie udało się edytować odpowiedzi:', editError);
+                }
             }
         }
     }
