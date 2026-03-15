@@ -9,7 +9,6 @@ const banCommand = require('../commands/ban');
 const unbanCommand = require('../commands/unban');
 const reactionroleCommand = require('../commands/reactionrole');
 const ticketCommand = require('../commands/ticket');
-const rekrutacjaToggleCommand = require('../commands/rekrutacjatoggle');
 
 // Mapa komend
 const commands = new Map();
@@ -23,7 +22,6 @@ commands.set(banCommand.name, banCommand);
 commands.set(unbanCommand.name, unbanCommand);
 commands.set(reactionroleCommand.name, reactionroleCommand);
 commands.set(ticketCommand.name, ticketCommand);
-commands.set(rekrutacjaToggleCommand.name, rekrutacjaToggleCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];

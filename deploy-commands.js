@@ -1,22 +1,6 @@
 const { REST, Routes } = require('discord.js');
 
-const commands = [
-    {
-    name: 'rekrutacja',
-    description: 'Włącza/wyłącza możliwość tworzenia ticketów rekrutacyjnych',
-    options: [
-        {
-            name: 'status',
-            description: 'Włącz lub wyłącz rekrutację',
-            type: 3,
-            required: true,
-            choices: [
-                { name: 'Włącz', value: 'on' },
-                { name: 'Wyłącz', value: 'off' }
-            ]
-        }
-    ]
-    },   
+const commands = [  
     {
     name: 'setup-ticket',
     description: 'Tworzy panel ticketowy (tylko admin)'
