@@ -1,10 +1,42 @@
 const { REST, Routes } = require('discord.js');
+const { description } = require('./commands/reactionrole');
 
 const commands = [
     {
         name: 'ping',
         description: 'Odpowiada Pong!',
     },
+    
+    {
+        name: 'ban',
+        description:`Zbanuj użytkownika`,
+        options: [
+            {   name: 'user',
+                description: 'Podaj nick użytkownika',
+                type: 6,
+                require: true
+            },
+            {
+                name: 'reason',
+                description: `Podaj powód bana`,
+                type: 3,
+                require: true
+            },
+            {
+                name: 'delete_message',
+                description: 'Podaj z ilu dni chcesz usunąć wiadomości',
+                type: 4,
+                require: false,
+                choices: [
+                    {name: 'Nie usuwaj', value: 0},
+                    {name: 'Ostatnie 24h', value: 1},
+                    {name: 'Ostatnie 3 dni', value: 3},
+                    {name: 'Ostatnie 7 dni', value: 7}
+                ]
+            }
+        ]    
+    },
+
     {
         name: 'level',
         description: 'Pokazuje twój poziom i XP',

@@ -5,6 +5,7 @@ const topCommand = require('../commands/top');
 const warnCommand = require('../commands/warn');
 const muteCommand = require('../commands/mute');
 const unmuteCommand = require('../commands/unmute');
+const banCommand = require('../commands/ban');
 const reactionroleCommand = require('../commands/reactionrole');
 
 // Mapa komend
@@ -15,10 +16,11 @@ commands.set(topCommand.name, topCommand);
 commands.set(warnCommand.name, warnCommand);
 commands.set(muteCommand.name, muteCommand);
 commands.set(unmuteCommand.name, unmuteCommand);
+commands.set(banCommand.name, banCommand); 
 commands.set(reactionroleCommand.name, reactionroleCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
-const komendyModeracyjne = ['warn', 'mute', 'unmute', 'reactionrole'];
+const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'reactionrole'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
