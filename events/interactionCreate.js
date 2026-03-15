@@ -364,9 +364,9 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 return `**${author}:** ${content}`;
             }).join('\n') || 'Brak wiadomości';
             
-            // Wyślij embed na kanał logów
-            const logChannel = client.channels.cache.get(KANAL_LOGOW);
-            if (logChannel) {
+            // Wyślij embed na kanał transkrypcji (1482856089644040192)
+            const transcriptChannel = client.channels.cache.get('1482856089644040192');
+            if (transcriptChannel) {
                 const { EmbedBuilder } = require('discord.js');
                 
                 const embed = new EmbedBuilder()
@@ -384,7 +384,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                     )
                     .setTimestamp();
                 
-                await logChannel.send({ embeds: [embed] });
+                await transcriptChannel.send({ embeds: [embed] });
             }
             
             await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
@@ -497,9 +497,9 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 return `**${author}:** ${content}`;
             }).join('\n') || 'Brak wiadomości';
             
-            // Wyślij embed na kanał logów
-            const logChannel = client.channels.cache.get(KANAL_LOGOW);
-            if (logChannel) {
+            // Wyślij embed na kanał transkrypcji (1482856089644040192)
+            const transcriptChannel = client.channels.cache.get('1482856089644040192');
+            if (transcriptChannel) {
                 const { EmbedBuilder } = require('discord.js');
                 
                 const embed = new EmbedBuilder()
@@ -517,7 +517,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                     )
                     .setTimestamp();
                 
-                await logChannel.send({ embeds: [embed] });
+                await transcriptChannel.send({ embeds: [embed] });
             }
             
             await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
