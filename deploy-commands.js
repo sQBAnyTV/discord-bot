@@ -2,6 +2,24 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'unban',
+    description: 'Odbanuj użytkownika (tylko moderator)',
+    options: [
+        {
+            name: 'user_id',
+            description: 'ID użytkownika do odbanowania',
+            type: 3,
+            required: true
+        },
+        {
+            name: 'reason',
+            description: 'Powód odbanowania',
+            type: 3,
+            required: false
+        }
+    ]
+    },
+    {
         name: 'ping',
         description: 'Odpowiada Pong!',
     },
