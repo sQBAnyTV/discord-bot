@@ -87,7 +87,7 @@ const commands = [
                 name: 'delete_messages',
                 description: 'Usuń wiadomości (0-7 dni)',
                 type: 4,
-                required: false,
+                required: true,
                 choices: [
                     { name: 'Nie usuwaj', value: 0 },
                     { name: 'Ostatnie 24h', value: 1 },
