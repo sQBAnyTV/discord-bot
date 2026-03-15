@@ -287,7 +287,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                 
                 const embed = new EmbedBuilder()
-                    .setColor(0x00FF00)
+                    .setColor(0x0099FF)
                     .setTitle(`❓ Ticket #${ticketId}`)
                     .setDescription(`Zgłoszenie od ${interaction.user}`)
                     .addFields(
@@ -353,30 +353,38 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             ticket.closedBy = interaction.user.tag;
             await ticket.save();
             
-            // Generuj transkrypt
+            // Pobierz wiadomości
             const messages = await channel.messages.fetch({ limit: 100 });
-            let transcript = `Ticket #${ticketId} - ${ticket.userName}\n`;
-            transcript += `Kategoria: ${ticket.category}\n`;
-            transcript += `Utworzono: ${ticket.createdAt}\n`;
-            transcript += `Zamknięto: ${new Date()}\n`;
-            transcript += `Zamknięte przez: ${interaction.user.tag}\n`;
-            transcript += `Powód: brak\n\n`;
-            transcript += `=== WIADOMOŚCI ===\n\n`;
-            
             const messagesArray = Array.from(messages.values()).reverse();
-            messagesArray.forEach(msg => {
-                if (!msg.author.bot || msg.content) {
-                    transcript += `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content || '[brak treści]'}\n`;
-                }
-            });
             
+            // Przygotuj podgląd (pierwsze 5 wiadomości)
+            const previewMessages = messagesArray.slice(0, 5).map(msg => {
+                const author = msg.author.tag;
+                const content = msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content;
+                return `**${author}:** ${content}`;
+            }).join('\n') || 'Brak wiadomości';
+            
+            // Wyślij embed na kanał logów
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             if (logChannel) {
-                const buffer = Buffer.from(transcript, 'utf-8');
-                await logChannel.send({
-                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag} (bez powodu)`,
-                    files: [{ attachment: buffer, name: `ticket-${ticketId}.txt` }]
-                });
+                const { EmbedBuilder } = require('discord.js');
+                
+                const embed = new EmbedBuilder()
+                    .setColor(ticket.category === 'rekrutacja' ? 0x00FF00 : 0x0099FF)
+                    .setTitle(`📝 Transkrypt ticketa #${ticketId}`)
+                    .setDescription(`Ticket został zamknięty przez **${interaction.user.tag}**`)
+                    .addFields(
+                        { name: '👤 Użytkownik', value: ticket.userName, inline: true },
+                        { name: '📂 Kategoria', value: ticket.category === 'rekrutacja' ? '📋 Rekrutacja' : '❓ Inne', inline: true },
+                        { name: '📅 Utworzono', value: `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:F>`, inline: true },
+                        { name: '🔒 Zamknięto', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+                        { name: '📝 Powód zamknięcia', value: 'Brak', inline: false },
+                        { name: '💬 Pierwsze wiadomości', value: previewMessages, inline: false },
+                        { name: '📊 Statystyki', value: `Łącznie wiadomości: **${messagesArray.length}**`, inline: false }
+                    )
+                    .setTimestamp();
+                
+                await logChannel.send({ embeds: [embed] });
             }
             
             await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
@@ -478,30 +486,38 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 console.log(`❌ Nie udało się wysłać PW do autora ticketa: ${error.message}`);
             }
             
-            // Generuj transkrypt
+            // Pobierz wiadomości
             const messages = await channel.messages.fetch({ limit: 100 });
-            let transcript = `Ticket #${ticketId} - ${ticket.userName}\n`;
-            transcript += `Kategoria: ${ticket.category}\n`;
-            transcript += `Utworzono: ${ticket.createdAt}\n`;
-            transcript += `Zamknięto: ${new Date()}\n`;
-            transcript += `Zamknięte przez: ${interaction.user.tag}\n`;
-            transcript += `Powód: ${reason}\n\n`;
-            transcript += `=== WIADOMOŚCI ===\n\n`;
-            
             const messagesArray = Array.from(messages.values()).reverse();
-            messagesArray.forEach(msg => {
-                if (!msg.author.bot || msg.content) {
-                    transcript += `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content || '[brak treści]'}\n`;
-                }
-            });
             
+            // Przygotuj podgląd (pierwsze 5 wiadomości)
+            const previewMessages = messagesArray.slice(0, 5).map(msg => {
+                const author = msg.author.tag;
+                const content = msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content;
+                return `**${author}:** ${content}`;
+            }).join('\n') || 'Brak wiadomości';
+            
+            // Wyślij embed na kanał logów
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             if (logChannel) {
-                const buffer = Buffer.from(transcript, 'utf-8');
-                await logChannel.send({
-                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag} z powodem: ${reason}`,
-                    files: [{ attachment: buffer, name: `ticket-${ticketId}.txt` }]
-                });
+                const { EmbedBuilder } = require('discord.js');
+                
+                const embed = new EmbedBuilder()
+                    .setColor(ticket.category === 'rekrutacja' ? 0x00FF00 : 0x0099FF)
+                    .setTitle(`📝 Transkrypt ticketa #${ticketId}`)
+                    .setDescription(`Ticket został zamknięty przez **${interaction.user.tag}**`)
+                    .addFields(
+                        { name: '👤 Użytkownik', value: ticket.userName, inline: true },
+                        { name: '📂 Kategoria', value: ticket.category === 'rekrutacja' ? '📋 Rekrutacja' : '❓ Inne', inline: true },
+                        { name: '📅 Utworzono', value: `<t:${Math.floor(ticket.createdAt.getTime() / 1000)}:F>`, inline: true },
+                        { name: '🔒 Zamknięto', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+                        { name: '📝 Powód zamknięcia', value: reason, inline: false },
+                        { name: '💬 Pierwsze wiadomości', value: previewMessages, inline: false },
+                        { name: '📊 Statystyki', value: `Łącznie wiadomości: **${messagesArray.length}**`, inline: false }
+                    )
+                    .setTimestamp();
+                
+                await logChannel.send({ embeds: [embed] });
             }
             
             await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
