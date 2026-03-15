@@ -53,39 +53,46 @@ module.exports = {
             }
         }
         
-        // Najpierw spróbuj wysłać PW (jeszcze przed banem)
         try {
-            const dmEmbed = new EmbedBuilder()
-                .setColor(0xFF0000)
-                .setTitle('🔨 Zostałeś zbanowany!')
-                .setDescription(`Na serwerze **${interaction.guild.name}**`)
-                .addFields(
-                    { name: 'Moderator', value: moderator.tag, inline: true },
-                    { name: 'Powód', value: reason, inline: false },
-                    { name: 'Usunięto wiadomości', value: deleteDays === 0 ? 'Nie' : `Ostatnie ${deleteDays} dni`, inline: true }
-                )
-                .setTimestamp()
-                .setFooter({ text: 'Ban został wykonany przez moderatora.' });
-
-            await targetUser.send({ embeds: [dmEmbed] });
-            console.log(`✅ Wysłano PW do ${targetUser.tag} przed banem`);
-        } catch (error) {
-            console.log(`❌ Nie udało się wysłać PW do ${targetUser.tag} (prawdopodobnie ma zamknięte PW)`);
-        }
-
-        // Teraz wykonaj bana
-        await interaction.guild.members.ban(targetUser.id, { 
-            reason: `Moderator: ${moderator.tag} | Powód: ${reason}`,
-            deleteMessageSeconds: deleteDays * 24 * 60 * 60
-        });
+            // 1. NAJPIERW wyślij PW (jeszcze przed banem)
+            let dmSent = false;
+            try {
+                const dmEmbed = new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('🔨 Zostałeś zbanowany!')
+                    .setDescription(`Na serwerze **${interaction.guild.name}**`)
+                    .addFields(
+                        { name: 'Moderator', value: moderator.tag, inline: true },
+                        { name: 'Powód', value: reason, inline: false },
+                        { name: 'Usunięto wiadomości', value: deleteDays === 0 ? 'Nie' : `Ostatnie ${deleteDays} dni`, inline: true }
+                    )
+                    .setTimestamp()
+                    .setFooter({ text: 'Ban został wykonany przez moderatora.' });
+                
+                await targetUser.send({ embeds: [dmEmbed] });
+                dmSent = true;
+                console.log(`✅ Wysłano PW do ${targetUser.tag} przed banem`);
+            } catch (dmError) {
+                console.log(`❌ Nie udało się wysłać PW do ${targetUser.tag} (prawdopodobnie ma zamknięte PW)`);
+            }
             
-            // Potwierdzenie dla moderatora
+            // 2. TERAZ wykonaj bana
+            await interaction.guild.members.ban(targetUser.id, { 
+                reason: `Moderator: ${moderator.tag} | Powód: ${reason}`,
+                deleteMessageSeconds: deleteDays * 24 * 60 * 60
+            });
+            
+            // 3. Potwierdzenie dla moderatora
+            const confirmMessage = dmSent 
+                ? `✅ Użytkownik ${targetUser.tag} został zbanowany i otrzymał powiadomienie PW.`
+                : `✅ Użytkownik ${targetUser.tag} został zbanowany. (Nie udało się wysłać PW)`;
+            
             await interaction.reply({
-                content: `✅ Użytkownik ${targetUser.tag} został zbanowany. Powód: ${reason}`,
+                content: confirmMessage,
                 flags: 64
             });
             
-            // Log na kanał logów
+            // 4. Log na kanał logów
             console.log(`Próba wysłania logu bana na kanał o ID: ${KANAL_LOGOW}`);
             const logChannel = client.channels.cache.get(KANAL_LOGOW);
             
@@ -99,7 +106,8 @@ module.exports = {
                         { name: 'Użytkownik', value: `${targetUser.tag} (${targetUser.id})`, inline: true },
                         { name: 'Moderator', value: `${moderator.tag} (${moderator.id})`, inline: true },
                         { name: 'Powód', value: reason, inline: false },
-                        { name: 'Usunięto wiadomości', value: deleteDays === 0 ? 'Nie' : `Ostatnie ${deleteDays} dni`, inline: true }
+                        { name: 'Usunięto wiadomości', value: deleteDays === 0 ? 'Nie' : `Ostatnie ${deleteDays} dni`, inline: true },
+                        { name: 'Powiadomienie PW', value: dmSent ? '✅ Tak' : '❌ Nie (zamknięte PW)', inline: true }
                     )
                     .setTimestamp();
                 
