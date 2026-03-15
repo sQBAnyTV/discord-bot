@@ -189,17 +189,21 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                     )
                     .setTimestamp();
                 
-                const closeButton = new ActionRowBuilder().addComponents(
+                const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`close_ticket_${ticketId}`)
-                        .setLabel('🔒 Zamknij rekrutację')
-                        .setStyle(ButtonStyle.Danger)
+                        .setCustomId(`close_no_reason_${ticketId}`)
+                        .setLabel('🔒 Zamknij bez powodu')
+                        .setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder()
+                        .setCustomId(`close_with_reason_${ticketId}`)
+                        .setLabel('📝 Zamknij z powodem')
+                        .setStyle(ButtonStyle.Secondary)
                 );
                 
                 await channel.send({ 
                     content: `<@${userId}> | <@&${process.env.STAFF_ROLE_ID}>`, 
                     embeds: [embed], 
-                    components: [closeButton] 
+                    components: [row] 
                 });
                 
                 await interaction.editReply(`✅ Utworzono rekrutację: ${channel}`);
@@ -292,17 +296,21 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                     )
                     .setTimestamp();
                 
-                const closeButton = new ActionRowBuilder().addComponents(
+                const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`close_ticket_${ticketId}`)
-                        .setLabel('🔒 Zamknij ticket')
-                        .setStyle(ButtonStyle.Danger)
+                        .setCustomId(`close_no_reason_${ticketId}`)
+                        .setLabel('🔒 Zamknij bez powodu')
+                        .setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder()
+                        .setCustomId(`close_with_reason_${ticketId}`)
+                        .setLabel('📝 Zamknij z powodem')
+                        .setStyle(ButtonStyle.Secondary)
                 );
                 
                 await channel.send({ 
                     content: `<@${userId}> | <@&${process.env.STAFF_ROLE_ID}>`, 
                     embeds: [embed], 
-                    components: [closeButton] 
+                    components: [row] 
                 });
                 
                 await interaction.editReply(`✅ Utworzono ticket: ${channel}`);
@@ -315,13 +323,24 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             return;
         }
         
-        // ========== OBSŁUGA ZAMYKANIA TICKETÓW ==========
-        if (interaction.isButton() && interaction.customId.startsWith('close_ticket_')) {
+        // ========== OBSŁUGA ZAMYKANIA BEZ POWODU ==========
+        if (interaction.isButton() && interaction.customId.startsWith('close_no_reason_')) {
             const Ticket = require('../models/ticket');
+            
+            // Sprawdź uprawnienia (tylko staff)
+            const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
+            const isAdmin = interaction.member.permissions.has('Administrator');
+            
+            if (!hasStaffRole && !isAdmin) {
+                return interaction.reply({
+                    content: '❌ Tylko staff może zamykać tickety!',
+                    flags: 64
+                });
+            }
             
             await interaction.deferReply();
             
-            const ticketId = interaction.customId.replace('close_ticket_', '');
+            const ticketId = interaction.customId.replace('close_no_reason_', '');
             const channel = interaction.channel;
             
             const ticket = await Ticket.findOne({ ticketId });
@@ -331,14 +350,17 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             
             ticket.status = 'closed';
             ticket.closedAt = new Date();
+            ticket.closedBy = interaction.user.tag;
             await ticket.save();
             
+            // Generuj transkrypt
             const messages = await channel.messages.fetch({ limit: 100 });
             let transcript = `Ticket #${ticketId} - ${ticket.userName}\n`;
             transcript += `Kategoria: ${ticket.category}\n`;
             transcript += `Utworzono: ${ticket.createdAt}\n`;
             transcript += `Zamknięto: ${new Date()}\n`;
-            transcript += `Zamknięte przez: ${interaction.user.tag}\n\n`;
+            transcript += `Zamknięte przez: ${interaction.user.tag}\n`;
+            transcript += `Powód: brak\n\n`;
             transcript += `=== WIADOMOŚCI ===\n\n`;
             
             const messagesArray = Array.from(messages.values()).reverse();
@@ -352,7 +374,132 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
             if (logChannel) {
                 const buffer = Buffer.from(transcript, 'utf-8');
                 await logChannel.send({
-                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag}`,
+                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag} (bez powodu)`,
+                    files: [{ attachment: buffer, name: `ticket-${ticketId}.txt` }]
+                });
+            }
+            
+            await interaction.editReply('🔒 Ticket zostanie zamknięty za 5 sekund...');
+            
+            setTimeout(() => {
+                channel.delete().catch(console.error);
+            }, 5000);
+            
+            return;
+        }
+        
+        // ========== OBSŁUGA ZAMYKANIA Z POWODEM (MODAL) ==========
+        if (interaction.isButton() && interaction.customId.startsWith('close_with_reason_')) {
+            // Sprawdź uprawnienia (tylko staff)
+            const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
+            const isAdmin = interaction.member.permissions.has('Administrator');
+            
+            if (!hasStaffRole && !isAdmin) {
+                return interaction.reply({
+                    content: '❌ Tylko staff może zamykać tickety!',
+                    flags: 64
+                });
+            }
+            
+            const ticketId = interaction.customId.replace('close_with_reason_', '');
+            
+            const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+            
+            const modal = new ModalBuilder()
+                .setCustomId(`close_reason_modal_${ticketId}`)
+                .setTitle('📝 Podaj powód zamknięcia');
+
+            const reasonInput = new TextInputBuilder()
+                .setCustomId('close_reason')
+                .setLabel('Powód zamknięcia ticketa')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMinLength(5)
+                .setMaxLength(500)
+                .setPlaceholder('Dlaczego zamykasz ten ticket?');
+
+            const row = new ActionRowBuilder().addComponents(reasonInput);
+            modal.addComponents(row);
+
+            await interaction.showModal(modal);
+            return;
+        }
+        
+        // ========== OBSŁUGA MODALA Z POWODEM ==========
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('close_reason_modal_')) {
+            const Ticket = require('../models/ticket');
+            
+            // Sprawdź uprawnienia (jeszcze raz dla bezpieczeństwa)
+            const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
+            const isAdmin = interaction.member.permissions.has('Administrator');
+            
+            if (!hasStaffRole && !isAdmin) {
+                return interaction.reply({
+                    content: '❌ Tylko staff może zamykać tickety!',
+                    flags: 64
+                });
+            }
+            
+            await interaction.deferReply();
+            
+            const ticketId = interaction.customId.replace('close_reason_modal_', '');
+            const reason = interaction.fields.getTextInputValue('close_reason');
+            const channel = interaction.channel;
+            
+            const ticket = await Ticket.findOne({ ticketId });
+            if (!ticket) {
+                return interaction.editReply('❌ Nie znaleziono ticketa w bazie!');
+            }
+            
+            ticket.status = 'closed';
+            ticket.closedAt = new Date();
+            ticket.closedBy = interaction.user.tag;
+            ticket.closeReason = reason;
+            await ticket.save();
+            
+            // Wyślij PW do autora ticketa
+            try {
+                const author = await client.users.fetch(ticket.userId);
+                if (author) {
+                    const { EmbedBuilder } = require('discord.js');
+                    const dmEmbed = new EmbedBuilder()
+                        .setColor(0xFFA500)
+                        .setTitle('📝 Twój ticket został zamknięty')
+                        .setDescription(`Ticket #${ticketId} został zamknięty przez staff.`)
+                        .addFields(
+                            { name: 'Powód zamknięcia', value: reason, inline: false }
+                        )
+                        .setTimestamp();
+                    
+                    await author.send({ embeds: [dmEmbed] });
+                    console.log(`✅ Wysłano PW o zamknięciu do ${author.tag}`);
+                }
+            } catch (error) {
+                console.log(`❌ Nie udało się wysłać PW do autora ticketa: ${error.message}`);
+            }
+            
+            // Generuj transkrypt
+            const messages = await channel.messages.fetch({ limit: 100 });
+            let transcript = `Ticket #${ticketId} - ${ticket.userName}\n`;
+            transcript += `Kategoria: ${ticket.category}\n`;
+            transcript += `Utworzono: ${ticket.createdAt}\n`;
+            transcript += `Zamknięto: ${new Date()}\n`;
+            transcript += `Zamknięte przez: ${interaction.user.tag}\n`;
+            transcript += `Powód: ${reason}\n\n`;
+            transcript += `=== WIADOMOŚCI ===\n\n`;
+            
+            const messagesArray = Array.from(messages.values()).reverse();
+            messagesArray.forEach(msg => {
+                if (!msg.author.bot || msg.content) {
+                    transcript += `[${msg.createdAt.toLocaleString()}] ${msg.author.tag}: ${msg.content || '[brak treści]'}\n`;
+                }
+            });
+            
+            const logChannel = client.channels.cache.get(KANAL_LOGOW);
+            if (logChannel) {
+                const buffer = Buffer.from(transcript, 'utf-8');
+                await logChannel.send({
+                    content: `📝 **Transkrypt ticketa #${ticketId}** (${ticket.userName}) - zamknięty przez ${interaction.user.tag} z powodem: ${reason}`,
                     files: [{ attachment: buffer, name: `ticket-${ticketId}.txt` }]
                 });
             }
