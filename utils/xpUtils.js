@@ -1,7 +1,6 @@
-// Funkcja do obliczania wymaganego XP na dany poziom (progresja geometryczna)
+// Funkcja do obliczania wymaganego XP na dany poziom
 function wymaganeXp(level) {
-    if (level === 1) return 100;
-    return 100 * Math.pow(2, level - 1);
+    return 50 * level * (level + 1);
 }
 
 // Funkcja do parsowania czasu (np. "10m", "1h", "2d")
@@ -12,10 +11,10 @@ function parseTime(timeStr) {
     if (isNaN(value)) return null;
     
     switch(unit) {
-        case 's': return value * 1000; // sekundy
-        case 'm': return value * 60 * 1000; // minuty
-        case 'h': return value * 60 * 60 * 1000; // godziny
-        case 'd': return value * 24 * 60 * 60 * 1000; // dni
+        case 's': return value * 1000;
+        case 'm': return value * 60 * 1000;
+        case 'h': return value * 60 * 60 * 1000;
+        case 'd': return value * 24 * 60 * 60 * 1000;
         default: return null;
     }
 }
