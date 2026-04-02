@@ -14,19 +14,14 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor(0x00FF00)
             .setTitle('🎫 System ticketów')
-            .setDescription('Kliknij w odpowiedni przycisk, aby otworzyć ticket:')
+            .setDescription('Kliknij w przycisk, aby otworzyć ticket:')
             .addFields(
-                { name: '📋 Rekrutacja', value: 'Chcesz dołączyć do ekipy nagrywkowej?', inline: true },
                 { name: '❓ Inne', value: 'Pytania, problemy, zgłoszenia', inline: true }
             )
             .setFooter({ text: 'Wybierz kategorię' });
 
         const row = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('ticket_rekrutacja')
-                    .setLabel('📋 Rekrutacja')
-                    .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                     .setCustomId('ticket_inne')
                     .setLabel('❓ Inne')
