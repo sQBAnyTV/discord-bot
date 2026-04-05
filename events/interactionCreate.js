@@ -9,6 +9,13 @@ const banCommand = require('../commands/ban');
 const unbanCommand = require('../commands/unban');
 const reactionroleCommand = require('../commands/reactionrole');
 const ticketCommand = require('../commands/ticket');
+const komendyEkonomii = [
+    'portfel', 'daily', 'ranking', 'napad', 'napad gracz',
+    'ekwipunek', 'sklep', 'kup', 'sprzedaj', 'gwiazdki',
+    'ukryj sie', 'gang', 'zaloz gang', 'zapros do gangu',
+    'opusc gang', 'skrzynka gangu', 'ranking gangow',
+    'loteria', 'coinflip', 'zaklad', 'statystyki'
+];
 
 // Mapa komend
 const commands = new Map();
@@ -538,6 +545,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         console.log(`Wykonuję komendę: ${interaction.commandName}`);
         console.log(`KANAL_LOGOW w interactionCreate: ${KANAL_LOGOW}`);
 
+        const KANAL_EKONOMIA = '1480329433549377810';
         if (!komendyModeracyjne.includes(interaction.commandName)) {
             if (interaction.channel.id !== KANAL_KOMEND) {
                 return interaction.reply({
@@ -546,7 +554,14 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
                 });
             }
         }
-
+        if (komendyEkonomii.includes(interaction.commandName)) {
+            if (interaction.channel.id !== '1480329433549377810') {
+                return interaction.reply({
+                    content: `❌ Komendy ekonomii można używać tylko na kanale <#1480329433549377810>!`,
+                    flags: 64
+                });
+            }
+        }
         try {
             await command.execute(interaction, client, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW);
         } catch (error) {

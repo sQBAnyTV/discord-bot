@@ -2,6 +2,15 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [  
     {
+    name: 'portfel',
+    description: 'Pokazuje twoje monety i statystyki'
+    },
+    {
+    name: 'daily',
+    description: 'Codzienna premia (monety)'
+    },
+   
+    {
     name: 'setup-ticket',
     description: 'Tworzy panel ticketowy (tylko admin)'
     },
