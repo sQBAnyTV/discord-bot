@@ -9,6 +9,8 @@ const banCommand = require('../commands/ban');
 const unbanCommand = require('../commands/unban');
 const reactionroleCommand = require('../commands/reactionrole');
 const ticketCommand = require('../commands/ticket');
+const portfelCommand = require('../commands/ekonomia/portfel');
+const dailyCommand = require('../commands/ekonomia/daily');
 const komendyEkonomii = [
     'portfel', 'daily', 'ranking', 'napad', 'napad gracz',
     'ekwipunek', 'sklep', 'kup', 'sprzedaj', 'gwiazdki',
@@ -29,6 +31,8 @@ commands.set(banCommand.name, banCommand);
 commands.set(unbanCommand.name, unbanCommand);
 commands.set(reactionroleCommand.name, reactionroleCommand);
 commands.set(ticketCommand.name, ticketCommand);
+commands.set(portfelCommand.name, portfelCommand);
+commands.set(dailyCommand.name, dailyCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
