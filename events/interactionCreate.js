@@ -116,7 +116,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA REKRUTACYJNEGO ==========
         if (interaction.isModalSubmit() && interaction.customId === 'rekrutacja_modal') {
-            const Ticket = require('../models/Ticket');
+            const Ticket = require('../models/ticket');
             
             await interaction.deferReply({ flags: 64 });
             
@@ -225,7 +225,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA "INNE" ==========
         if (interaction.isModalSubmit() && interaction.customId === 'inne_modal') {
-            const Ticket = require('../models/Ticket');
+            const Ticket = require('../models/ticket');
             
             await interaction.deferReply({ flags: 64 });
             
@@ -332,7 +332,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA ZAMYKANIA BEZ POWODU ==========
         if (interaction.isButton() && interaction.customId.startsWith('close_no_reason_')) {
-            const Ticket = require('../models/Ticket');
+            const Ticket = require('../models/ticket');
             
             // Sprawdź uprawnienia (tylko staff)
             const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
@@ -442,7 +442,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA Z POWODEM ==========
         if (interaction.isModalSubmit() && interaction.customId.startsWith('close_reason_modal_')) {
-            const Ticket = require('../models/Ticket');
+            const Ticket = require('../models/ticket');
             
             // Sprawdź uprawnienia (jeszcze raz dla bezpieczeństwa)
             const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
