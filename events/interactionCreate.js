@@ -11,13 +11,6 @@ const reactionroleCommand = require('../commands/reactionrole');
 const ticketCommand = require('../commands/ticket');
 const portfelCommand = require('../commands/ekonomia/portfel');
 const dailyCommand = require('../commands/ekonomia/daily');
-const komendyEkonomii = [
-    'portfel', 'daily', 'ranking', 'napad', 'napad gracz',
-    'ekwipunek', 'sklep', 'kup', 'sprzedaj', 'gwiazdki',
-    'ukryj sie', 'gang', 'zaloz gang', 'zapros do gangu',
-    'opusc gang', 'skrzynka gangu', 'ranking gangow',
-    'loteria', 'coinflip', 'zaklad', 'statystyki'
-];
 
 // Mapa komend
 const commands = new Map();
@@ -36,6 +29,9 @@ commands.set(dailyCommand.name, dailyCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
+
+// Lista komend ekonomii (tylko na kanale ekonomii)
+const komendyEkonomii = ['portfel', 'daily'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
@@ -120,7 +116,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA REKRUTACYJNEGO ==========
         if (interaction.isModalSubmit() && interaction.customId === 'rekrutacja_modal') {
-            const Ticket = require('../models/ticket');
+            const Ticket = require('../models/Ticket');
             
             await interaction.deferReply({ flags: 64 });
             
@@ -229,7 +225,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA "INNE" ==========
         if (interaction.isModalSubmit() && interaction.customId === 'inne_modal') {
-            const Ticket = require('../models/ticket');
+            const Ticket = require('../models/Ticket');
             
             await interaction.deferReply({ flags: 64 });
             
@@ -336,7 +332,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA ZAMYKANIA BEZ POWODU ==========
         if (interaction.isButton() && interaction.customId.startsWith('close_no_reason_')) {
-            const Ticket = require('../models/ticket');
+            const Ticket = require('../models/Ticket');
             
             // Sprawdź uprawnienia (tylko staff)
             const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
@@ -446,7 +442,7 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         
         // ========== OBSŁUGA MODALA Z POWODEM ==========
         if (interaction.isModalSubmit() && interaction.customId.startsWith('close_reason_modal_')) {
-            const Ticket = require('../models/ticket');
+            const Ticket = require('../models/Ticket');
             
             // Sprawdź uprawnienia (jeszcze raz dla bezpieczeństwa)
             const hasStaffRole = interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID);
@@ -549,23 +545,26 @@ module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW
         console.log(`Wykonuję komendę: ${interaction.commandName}`);
         console.log(`KANAL_LOGOW w interactionCreate: ${KANAL_LOGOW}`);
 
-        const KANAL_EKONOMIA = '1480329433549377810';
-        if (!komendyModeracyjne.includes(interaction.commandName)) {
-            if (interaction.channel.id !== KANAL_KOMEND) {
-                return interaction.reply({
-                    content: `❌ Komend można używać tylko na kanale <#${KANAL_KOMEND}>!`,
-                    flags: 64
-                });
-            }
-        }
+        // ========== OGRANICZENIA KANAŁÓW ==========
+        // Jeśli to komenda ekonomii
         if (komendyEkonomii.includes(interaction.commandName)) {
             if (interaction.channel.id !== '1480329433549377810') {
                 return interaction.reply({
-                    content: `❌ Komendy ekonomii można używać tylko na kanale <#1480329433549377810>!`,
+                    content: '❌ Komendy ekonomii można używać tylko na kanale <#1480329433549377810>!',
                     flags: 64
                 });
             }
         }
+        // Jeśli to komenda moderacyjna – bez ograniczeń
+        else if (!komendyModeracyjne.includes(interaction.commandName)) {
+            if (interaction.channel.id !== KANAL_KOMEND) {
+                return interaction.reply({
+                    content: `❌ Komendy ogólne można używać tylko na kanale <#${KANAL_KOMEND}>!`,
+                    flags: 64
+                });
+            }
+        }
+
         try {
             await command.execute(interaction, client, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW);
         } catch (error) {
