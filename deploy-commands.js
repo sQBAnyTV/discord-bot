@@ -1,6 +1,15 @@
 const { REST, Routes } = require('discord.js');
 
+
 const commands = [
+    {
+    name: 'gwiazdki',
+    description: 'Pokazuje twój poziom poszukiwań'
+    },
+    {
+    name: 'ukryj-sie',
+    description: 'Zmniejsza poziom poszukiwań o 1 (koszt 1000 monet)'
+    },
     {
     name: 'kup',
     description: 'Kup przedmiot w czarnym rynku',
