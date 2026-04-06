@@ -3,6 +3,10 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'ranking',
+    description: 'Pokazuje ranking graczy (monety, napady)'
+    },
+    {
     name: 'gwiazdki',
     description: 'Pokazuje twój poziom poszukiwań'
     },
