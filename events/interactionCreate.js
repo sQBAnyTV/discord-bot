@@ -45,10 +45,10 @@ commands.set(rankingCommand.name, rankingCommand);
 commands.set(faqCommand.name, faqCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
-const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
+const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket','faq'];
 
 // Lista komend ekonomii (tylko na kanale ekonomii)
-const komendyEkonomii = ['portfel', 'daily', 'napad', 'ekwipunek', 'sklep', 'kup', 'gwiazdki', 'ukryj-sie', 'ranking'];
+const komendyEkonomii = ['portfel', 'daily', 'napad', 'ekwipunek', 'sklep', 'kup', 'gwiazdki', 'ukryj-sie', 'ranking',];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
