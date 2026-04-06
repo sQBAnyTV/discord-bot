@@ -2,6 +2,10 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'sklep',
+    description: 'Wyświetla listę dostępnych przedmiotów w czarnym rynku'
+    },
+    {
     name: 'ekwipunek',
     description: 'Pokazuje twoje przedmioty'
     },
