@@ -33,8 +33,21 @@ module.exports = {
 
         const p = parametry[rodzaj];
 
+        // Cooldown (20 minut)
+        const cooldownCzas = 20 * 60 * 1000;
+        const ostatniNapad = gracz.cooldownNapad?.[rodzaj];
+        const teraz = new Date();
+
+        if (ostatniNapad && (teraz - ostatniNapad) < cooldownCzas) {
+            const pozostalo = Math.ceil((cooldownCzas - (teraz - ostatniNapad)) / 60000);
+            return interaction.reply({
+                content: `⏳ Musisz poczekać jeszcze **${pozostalo} minut** przed kolejnym napadem na **${p.nazwa}**!`,
+                flags: 64
+            });
+        }
+
         // Sprawdź wymagany przedmiot
-        if (p.wymagany && gracz.ekwipunek[p.wymagany] < 1) {
+        if (p.wymagany && (!gracz.ekwipunek || gracz.ekwipunek[p.wymagany] < 1)) {
             return interaction.reply({
                 content: `❌ Nie masz **${p.dropNazwa}**! Wymagane do napadu na ${p.nazwa}.`,
                 flags: 64
@@ -76,6 +89,7 @@ module.exports = {
 
         gracz.monety += zmianaMonet;
         gracz.poziomPoszukiwan += zmianaPoszukiwan;
+        gracz.cooldownNapad[rodzaj] = teraz;
         await gracz.save();
 
         const embed = new EmbedBuilder()

@@ -10,15 +10,22 @@ const ekonomiaSchema = new mongoose.Schema({
     udaneNapady: { type: Number, default: 0 },
     nieudaneNapady: { type: Number, default: 0 },
     ostatnieDaily: { type: Date, default: null },
-    grupa: { type: String, default: null }, // ID lidera lub null
+    grupa: { type: String, default: null },
     ekwipunek: {
         pistolet: { type: Number, default: 0 },
         samochod: { type: Number, default: 0 },
         kamizelka: { type: Number, default: 0 },
         zaklocacz: { type: Number, default: 0 },
         c4: { type: Number, default: 0 },
-        apteczka: { type: Number, default: 0 }
-    }
+        karta_magnetyczna: { type: Number, default: 0 },
+        wiertlo: { type: Number, default: 0 }
+    },
+    cooldownNapad: {
+        sklep: { type: Date, default: null },
+        konwoj: { type: Date, default: null },
+        bank: { type: Date, default: null },
+        muzeum: { type: Date, default: null }
+}
 });
 
 module.exports = mongoose.model('GraczEkonomia', ekonomiaSchema);
