@@ -19,6 +19,7 @@ const kupCommand = require('../commands/ekonomia/kup');
 const gwiazdkiCommand = require('../commands/ekonomia/gwiazdki');
 const ukryjSieCommand = require('../commands/ekonomia/ukryj_sie');
 const rankingCommand = require('../commands/ekonomia/ranking');
+const faqCommand = require('../commands/ekonomia/faq');
 
 // Mapa komend
 const commands = new Map();
@@ -41,6 +42,7 @@ commands.set(kupCommand.name, kupCommand);
 commands.set(gwiazdkiCommand.name, gwiazdkiCommand);
 commands.set(ukryjSieCommand.name, ukryjSieCommand);
 commands.set(rankingCommand.name, rankingCommand);
+commands.set(faqCommand.name, faqCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];

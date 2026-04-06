@@ -3,6 +3,10 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'faq',
+    description: 'Wyświetla przewodnik po systemie ekonomii'
+    },
+    {
     name: 'ranking',
     description: 'Pokazuje ranking graczy (monety, napady)'
     },
