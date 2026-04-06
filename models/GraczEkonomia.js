@@ -10,6 +10,7 @@ const ekonomiaSchema = new mongoose.Schema({
     udaneNapady: { type: Number, default: 0 },
     nieudaneNapady: { type: Number, default: 0 },
     ostatnieDaily: { type: Date, default: null },
+    grupa: { type: String, default: null }, // ID lidera lub null
     ekwipunek: {
         pistolet: { type: Number, default: 0 },
         samochod: { type: Number, default: 0 },

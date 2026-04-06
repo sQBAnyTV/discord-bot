@@ -1,6 +1,24 @@
 const { REST, Routes } = require('discord.js');
 
-const commands = [  
+const commands = [
+    {
+    name: 'napad',
+    description: 'Wykonaj napad (sklep, konwój, bank, muzeum)',
+    options: [
+        {
+            name: 'rodzaj',
+            description: 'Wybierz cel napadu',
+            type: 3,
+            required: true,
+            choices: [
+                { name: '🏪 Sklep', value: 'sklep' },
+                { name: '🚚 Konwój', value: 'konwoj' },
+                { name: '🏦 Bank', value: 'bank' },
+                { name: '🏛️ Muzeum', value: 'muzeum' }
+            ]
+        }
+    ]
+    },  
     {
     name: 'portfel',
     description: 'Pokazuje twoje monety i statystyki'

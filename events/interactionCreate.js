@@ -11,6 +11,7 @@ const reactionroleCommand = require('../commands/reactionrole');
 const ticketCommand = require('../commands/ticket');
 const portfelCommand = require('../commands/ekonomia/portfel');
 const dailyCommand = require('../commands/ekonomia/daily');
+const napadCommand = require('../commands/ekonomia/napad');
 
 // Mapa komend
 const commands = new Map();
@@ -26,12 +27,13 @@ commands.set(reactionroleCommand.name, reactionroleCommand);
 commands.set(ticketCommand.name, ticketCommand);
 commands.set(portfelCommand.name, portfelCommand);
 commands.set(dailyCommand.name, dailyCommand);
+commands.set(napadCommand.name, napadCommand);
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
 
 // Lista komend ekonomii (tylko na kanale ekonomii)
-const komendyEkonomii = ['portfel', 'daily'];
+const komendyEkonomii = ['portfel', 'daily','napad'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {
