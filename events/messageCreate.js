@@ -6,6 +6,18 @@ const { EmbedBuilder } = require('discord.js');
 module.exports = (client, KANAL_PROPONOWANIA, KANAL_XP, KANAL_LEVEL) => {
     client.on('messageCreate', async message => {
         if (message.author.bot) return;
+
+        // ========== AUTOMATYCZNE USUWANIE NA KANALE EKONOMII ==========
+        const KANAL_EKONOMIA = '1480329433549377810';
+        if (message.channel.id === KANAL_EKONOMIA) {
+            try {
+                await message.delete();
+                console.log(`🗑️ Usunięto wiadomość od ${message.author.tag} na kanale ekonomii`);
+            } catch (error) {
+                console.error('❌ Nie udało się usunąć wiadomości:', error);
+            }
+            return; // Nie przetwarzaj dalej
+        }
         
         // SYSTEM LEVELOWANIA - TYLKO na kanale XP
         if (message.channel.id === KANAL_XP) {
