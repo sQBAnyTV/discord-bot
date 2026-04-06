@@ -49,7 +49,7 @@ module.exports = {
         // Sprawdź wymagany przedmiot
         if (p.wymagany && (!gracz.ekwipunek || gracz.ekwipunek[p.wymagany] < 1)) {
             return interaction.reply({
-                content: `❌ Nie masz **${p.dropNazwa}**! Wymagane do napadu na ${p.nazwa}.`,
+                content: `❌ Nie posiadasz wymaganego przedmiotu do napadu na ${p.nazwa}.`,
                 flags: 64
             });
         }

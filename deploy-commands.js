@@ -2,6 +2,10 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'ekwipunek',
+    description: 'Pokazuje twoje przedmioty'
+    },
+    {
     name: 'napad',
     description: 'Wykonaj napad (sklep, konwój, bank, muzeum)',
     options: [
