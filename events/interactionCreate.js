@@ -15,6 +15,7 @@ const napadCommand = require('../commands/ekonomia/napad');
 const ekwipunekCommand = require('../commands/ekonomia/ekwipunek');
 const sklepCommand = require('../commands/ekonomia/sklep');
 const sklep = require('../commands/ekonomia/sklep');
+const kupCommand = require('../commands/ekonomia/kup');
 
 // Mapa komend
 const commands = new Map();
@@ -33,13 +34,15 @@ commands.set(dailyCommand.name, dailyCommand);
 commands.set(napadCommand.name, napadCommand);
 commands.set(ekwipunekCommand.name, ekwipunekCommand);
 commands.set(sklepCommand.name, sklepCommand);
+commands.set(kupCommand.name, kupCommand);
+
 
 
 // Lista komend moderacyjnych (dostępne wszędzie)
 const komendyModeracyjne = ['warn', 'mute', 'unmute', 'ban', 'unban', 'reactionrole', 'setup-ticket'];
 
 // Lista komend ekonomii (tylko na kanale ekonomii)
-const komendyEkonomii = ['portfel', 'daily','napad','ekwipunek','sklep'];
+const komendyEkonomii = ['portfel', 'daily','napad','ekwipunek','sklep','kup'];
 
 module.exports = (client, KANAL_KOMEND, ROLA_HELPER, ROLA_MODERATOR, KANAL_LOGOW) => {
     client.on('interactionCreate', async interaction => {

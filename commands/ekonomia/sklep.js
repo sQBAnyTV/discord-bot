@@ -9,9 +9,9 @@ module.exports = {
             { nazwa: '🚗 Samochód', cena: 2500, opis: '-30% kary za porażkę' },
             { nazwa: '🛡️ Kamizelka', cena: 3000, opis: 'Chroni przed kradzieżą (50%)' },
             { nazwa: '📡 Zakłócacz', cena: 5000, opis: '40% szansy na uniknięcie bana' },
-            { nazwa: '💣 C4', cena: 2000, opis: 'Wymagane do napadu na konwój' },
-            { nazwa: '💳 Karta magnetyczna', cena: 4000, opis: 'Wymagana do napadu na bank' },
-            { nazwa: '🔧 Wiertło', cena: 6000, opis: 'Wymagane do napadu na muzeum' }
+            { nazwa: '💣 C4', cena: 2000, opis: 'Fajnie wygląda! Ciekawe do czego może służyć?' },
+            { nazwa: '💳 Karta magnetyczna', cena: 4000, opis: 'Wygląda jak karta pracownika banku' },
+            { nazwa: '🔧 Wiertło', cena: 6000, opis: 'Nie planowałem robić remontu.' }
         ];
 
         let opis = '';

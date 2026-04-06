@@ -2,6 +2,27 @@ const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
+    name: 'kup',
+    description: 'Kup przedmiot w czarnym rynku',
+    options: [
+        {
+            name: 'przedmiot',
+            description: 'Przedmiot do kupienia',
+            type: 3,
+            required: true,
+            choices: [
+                { name: '🔫 Pistolet', value: 'pistolet' },
+                { name: '🚗 Samochód', value: 'samochod' },
+                { name: '🛡️ Kamizelka', value: 'kamizelka' },
+                { name: '📡 Zakłócacz', value: 'zaklocacz' },
+                { name: '💣 C4', value: 'c4' },
+                { name: '💳 Karta magnetyczna', value: 'karta_magnetyczna' },
+                { name: '🔧 Wiertło', value: 'wiertlo' }
+            ]
+        }
+    ]
+    },
+    {
     name: 'sklep',
     description: 'Wyświetla listę dostępnych przedmiotów w czarnym rynku'
     },
