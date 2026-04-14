@@ -102,12 +102,6 @@ async function zmniejszGwiazdki() {
         
         if (result.modifiedCount > 0) {
             console.log(`⭐ Zmniejszono gwiazdki ${result.modifiedCount} graczom o 1`);
-            
-            // Opcjonalnie: wyślij powiadomienie na kanał logów
-            const logChannel = client.channels.cache.get(process.env.KANAL_LOGOW);
-            if (logChannel) {
-                logChannel.send(`⭐ **Automatyczne zmniejszenie gwiazdek** – ${result.modifiedCount} graczy ma teraz mniej gwiazdek.`);
-            }
         }
     } catch (error) {
         console.error('❌ Błąd przy zmniejszaniu gwiazdek:', error);
