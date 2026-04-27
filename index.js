@@ -112,3 +112,8 @@ async function zmniejszGwiazdki() {
 setInterval(zmniejszGwiazdki, 60 * 60 * 1000);
 console.log('⏰ Uruchomiono automatyczne zmniejszanie gwiazdek co godzinę');
 client.login(token);
+
+setInterval(() => {
+    const used = process.memoryUsage();
+    console.log(`📊 Pamięć: RSS=${Math.round(used.rss / 1024 / 1024)}MB, Heap=${Math.round(used.heapUsed / 1024 / 1024)}MB`);
+}, 60 * 1000); // co minutę
