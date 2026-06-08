@@ -72,7 +72,6 @@ module.exports = (client, KANAL_PROPONOWANIA, KANAL_XP, KANAL_LEVEL) => {
                     });
                     
                     // TRYB POWOLNY WYŁĄCZONY – komentarz lub usunięcie linii
-                    // await thread.setRateLimitPerUser(60);
                     
                     await thread.send(`👋 Witaj ${message.author}! Tutaj możecie dyskutować o podanej propozycji.`);
                     console.log(`Utworzono wątek: ${thread.name} (bez trybu powolnego)`);
@@ -83,7 +82,7 @@ module.exports = (client, KANAL_PROPONOWANIA, KANAL_XP, KANAL_LEVEL) => {
                 
             } catch (error) {
                 console.error('Wystąpił błąd:', error);
-                await message.channel.send('❌ Wystąpił błąd podczas przetwarzania propozycji.');
+                await message.channel.send('❌ Wystąpił błąd podczas przetwarzania propozycji!');
             }
         }
     });
